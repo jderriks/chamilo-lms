@@ -192,6 +192,9 @@ function move($source, $target, $forceMove = true, $moveContent = false)
 
         /* File case */
         if (is_file($source)) {
+            if (is_file($target . '/' . $file_name)) {
+                return false; // target file already exists
+            }
             if ($forceMove && !$isWindowsOS && $canExec) {
                 exec('mv ' . $source . ' ' . $target . '/' . $file_name);
             } else {
@@ -223,6 +226,7 @@ function move($source, $target, $forceMove = true, $moveContent = false)
                     }
                 }
             } else {
+                $target = $target. "/" . basename($source);
                 return copyDirTo($source, $target);
             }
             return true;
