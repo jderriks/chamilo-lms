@@ -439,9 +439,7 @@ switch ($action) {
             $element = CourseManager::addGroupMultiSelect($form, $group_properties, array());
         }
 
-        $form->setRequired($element);
         $form->addHtml('</div>');
-//        $form->setRequired($element);
         $form->addCheckBox('email_ann', '', get_lang('EmailOption'));
 
         if (!isset($announcement_to_modify)) {
@@ -489,7 +487,6 @@ switch ($action) {
 
         $form->addElement('text', 'title', get_lang('EmailTitle'));
         $form->addRule('title', get_lang('ThisFieldIsRequired'), 'required');
-
         $form->addElement('hidden', 'id');
         $htmlTags = "<b>".get_lang('Tags')."</b><br /><br />";
         $tags = AnnouncementManager::get_tags();
@@ -506,7 +503,7 @@ switch ($action) {
             false,
             array('ToolbarSet' => 'Announcements')
         );
-$form->addRule('content', get_lang('ThisFieldIsRequired'), 'required');
+
         $form->addElement('file', 'user_upload', get_lang('AddAnAttachment'));
         $form->addElement('textarea', 'file_comment', get_lang('FileComment'));
         $form->addElement('hidden', 'sec_token', $stok);
@@ -526,7 +523,7 @@ $form->addRule('content', get_lang('ThisFieldIsRequired'), 'required');
 
         if ($form->validate()) {
             $data = $form->getSubmitValues();
-            $data['users'] = isset($data['users']) ? $data['users'] : "";
+            $data['users'] = isset($data['users']) ? $data['users'] : ['everyone'];
 
             $sendToUsersInSession = isset($data['send_to_users_in_session']) ? true : false;
 

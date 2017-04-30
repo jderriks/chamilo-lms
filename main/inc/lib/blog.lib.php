@@ -379,7 +379,7 @@ class Blog
                 $file_name = $_FILES['user_upload']['name'];
 
                 if (!filter_extension($new_file_name)) {
-                    Display::display_error_message(get_lang('UplUnableToSaveFileFilteredExtension'));
+                    echo Display::return_message(get_lang('UplUnableToSaveFileFilteredExtension'), 'error');
                 } else {
                     $new_file_name = uniqid('');
                     $new_path = $updir.'/'.$new_file_name;
@@ -404,7 +404,7 @@ class Blog
 
             return $last_post_id;
         } else {
-            Display::display_error_message(get_lang('UplNoFileUploaded'));
+            echo Display::return_message(get_lang('UplNoFileUploaded'), 'error');
         }
     }
 
@@ -540,7 +540,7 @@ class Blog
                     $file_name = Database::escape_string($_FILES['user_upload']['name']);
 
                     if (!filter_extension($new_file_name)) {
-                        Display:: display_error_message(get_lang('UplUnableToSaveFileFilteredExtension'));
+                        echo Display::return_message(get_lang('UplUnableToSaveFileFilteredExtension'), 'error');
                     } else {
                         $new_file_name = uniqid('');
                         $new_path = $updir . '/' . $new_file_name;
@@ -1000,7 +1000,7 @@ class Blog
                     'title' => stripslashes($blog_post['title']),
                     'extract' => self::getPostExtract($blog_post['full_text'], BLOG_MAX_PREVIEW_CHARS),
                     'content' => stripslashes($blog_post['full_text']),
-                    'post_date' => api_convert_and_format_date($blog_post['date_creation']),
+                    'post_date' => Display::dateToStringAgoAndLongDate($blog_post['date_creation']),
                     'n_comments' => $blog_post_comments['number_of_comments'],
                     'files' => $fileArray,
                     'score_ranking' => $scoreRanking
@@ -1123,7 +1123,7 @@ class Blog
             'title' => stripslashes($blog_post['title']),
             'extract' => api_get_short_text_from_html(stripslashes($blog_post['full_text']), 400),
             'content' => $post_text,
-            'post_date' => api_convert_and_format_date($blog_post['date_creation']),
+            'post_date' => Display::dateToStringAgoAndLongDate($blog_post['date_creation']),
             'n_comments' => $blog_post_comments['number_of_comments'],
             'files' => $fileArray,
             'id_task' => $task_id,
@@ -1236,7 +1236,7 @@ class Blog
                 'title' => $comment['title'],
                 'content' => $comment_text,
                 'id_author' => $comment['author_id'],
-                'comment_date' => api_convert_and_format_date($comment['date_creation']),
+                'comment_date' => Display::dateToStringAgoAndLongDate($comment['date_creation']),
                 'id_blog' => $comment['blog_id'],
                 'id_post' => $comment['post_id'],
                 'id_task' => $comment['task_id'],

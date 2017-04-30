@@ -226,7 +226,7 @@ header{
 /* notifications help and bug */
 .notification-panel {
   position: fixed;
-  top: 280px;
+  top: 200px;
   right: -10px;
   z-index:9999;
   width: 73px;
@@ -308,7 +308,9 @@ header{
     text-align:center;
     vertical-align:middle;
 }
-
+input[type=checkbox], input[type=radio]{
+    margin: 8px 0 0;
+}
 #gradebook_list .centered .badge-group {
     width: auto;
 }
@@ -317,12 +319,13 @@ header{
   padding-top: 7px;
   margin-right: 10px;
 }
-
 .button-load{
   background: url("../../main/img/icons/64/file_upload.png") no-repeat center 20px;
   padding-top: 70px;
 }
-
+.radio.learnpath img{
+    margin-right: 5px;
+}
 #results .file_upload_highlight {
     background: #F4D364;
 }
@@ -4853,6 +4856,7 @@ div#chat-remote-video video {
 }
 .grid-courses .items .toolbar{
     text-align: right;
+    padding: 0 10px;
 }
 .grid-courses .items .toolbar .info{
     float: left;
@@ -4860,9 +4864,21 @@ div#chat-remote-video video {
 }
 .grid-courses .session-date,
 .grid-courses .session-info{
-    color: #fff;
     font-size: 12px;
     padding: 5px 10px;
+}
+.grid-courses .items .block-info{
+    padding: 0 10px;
+    font-size: 12px;
+}
+.grid-courses .items .block-date{
+    padding: 5px 10px;
+    font-size: 11px;
+    line-height: 18px;
+}
+.grid-courses .items .block-info .list-inline{
+	margin: 0;
+	padding: 0;
 }
 .grid-courses .items .image{
     position: relative;
@@ -4980,6 +4996,12 @@ div#chat-remote-video video {
     margin-top: 15px;
     margin-bottom: 15px;
 }
+.title-session,
+.title-courses{
+	text-align: center;
+	font-weight: bold;
+	margin-bottom: 25px;
+}
 /* new grid catalog */
 .section-course-wrapper{
     -webkit-box-orient: horizontal;
@@ -5000,10 +5022,16 @@ div#chat-remote-video video {
     display: flex !important;
 }
 /* Catalog session */
-
-.search-session{
-    margin-bottom: 30px;
+.return-catalog{
+	margin-bottom: 35px;
+	padding-left: 15px;
+    padding-right: 15px;
+}
+.search-session, .search-courses{
+    margin-bottom: 15px;
     margin-top: 25px;
+    padding-left: 15px;
+    padding-right: 15px;
 }
 .search-session .form-inline label{
     font-weight: normal;
@@ -5252,7 +5280,6 @@ div#chat-remote-video video {
 .ui-tabs.ui-widget-content{
     border: none;
 }
-
 .ui-tabs .ui-state-default, .ui-tabs .ui-widget-content .ui-state-default, .ui-tabs .ui-widget-header .ui-state-default{
     background: #fff;
 }
@@ -5420,7 +5447,6 @@ div#chat-remote-video video {
   padding-top: 3px;
   padding-bottom: 5px;
   border-radius: 5px;
-
 }
 .items-course .items-course-info .toolbar{
     text-align: center;
@@ -5449,7 +5475,6 @@ div#chat-remote-video video {
 #toolbar-agenda .show-tick{
     width: 420px;
 }
-
 .files-table{
     padding-top: 20px;
 }
@@ -5508,6 +5533,52 @@ div#chat-remote-video video {
 }
 .report_section .table{
   font-size: 12px;
+}
+.promotions{
+    border-bottom: 1px solid #DDD;
+    margin-top: 30px;
+}
+.career p{
+    padding-left: 10px;
+}
+.promotions .title{
+    font-size: 16px;
+    background-color: #DFDFDF;
+}
+.promotions .cycles{
+    background-color: #F3F3F3;
+    text-align: center;
+    vertical-align: middle;
+    text-transform: uppercase;
+    border-right: 1px solid #DDD;
+}
+.promotions .cycles h4{
+    font-size: 14px;
+    font-weight: bold;
+}
+.promotions .cycles a{
+    color: #66666C;
+}
+.promotions .cycles a:hover{
+    color: initial;
+}
+.promotions .courses{
+    background-color: #FAFAFA;
+    vertical-align: middle;
+    border-right: 1px solid #DDD;
+}
+.promotions .promo{
+    background-color: #D1D1D1;
+    text-align: center;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+.promotions .promo h4 {
+    font-size: 18px;
+    font-weight: bold;
+}
+.promotions .promo h4 a{
+    color: #666;
 }
 /* CSS for the view by session My Course tab */
 .session-view-block {
@@ -5609,7 +5680,7 @@ a.sessionView {
 }
 #listFriends .list-group-item{
   border: none;
-  padding: 6px;
+  padding: 0;
   font-size: 12px;
 }
 #listFriends .help{
@@ -5618,6 +5689,9 @@ a.sessionView {
 #listFriends a{
   display: block;
   text-overflow: ellipsis;
+}
+#listFriends a:hover{
+	background: none;
 }
 #listFriends a .username{
     display: inline-block;
@@ -5640,6 +5714,7 @@ a.sessionView {
   width: 32px;
   height: 32px;
   margin-right: 5px;
+  vertical-align: baseline;
 }
 #course-block .list-group .list-group-item,
 #session-block .list-group .list-group-item
@@ -6166,6 +6241,13 @@ ul#toolnavbox-two li a.btn{
     display: block;
     width: 100%;
 }
+.label-subscribed{
+    font-size: 12px;
+    position: absolute;
+    top: -65px;
+    right: 0;
+    width: 100px;
+}
 /* CSS NEW TOP ******************************************************************************/
 /* CSS Responsive */
 @media (min-width: 1025px) and (max-width: 1200px) {
@@ -6416,6 +6498,9 @@ ul#toolnavbox-two li a.btn{
     .grid-courses{
         margin-top: 10px;
         padding-top: 10px;
+    }
+    .title-session{
+    	font-size: 25px;
     }
 }
 

@@ -227,7 +227,9 @@ class Exercise
      */
     public function getCutTitle()
     {
-        return cut($this->exercise, EXERCISE_MAX_NAME_SIZE);
+        $title = $this->getUnformattedTitle();
+
+        return cut($title, EXERCISE_MAX_NAME_SIZE);
     }
 
     /**
@@ -243,12 +245,16 @@ class Exercise
 
     /**
      * returns the exercise title
-     *
      * @author Olivier Brouckaert
+     * @param bool $unformattedText Optional. Get the title without HTML tags
      * @return string - exercise title
      */
-    public function selectTitle()
+    public function selectTitle($unformattedText = false)
     {
+        if ($unformattedText) {
+            return $this->getUnformattedTitle();
+        }
+
         return $this->exercise;
     }
 
@@ -1819,12 +1825,22 @@ class Exercise
         $form->addElement('header', $form_title);
 
         // Title.
-        $form->addElement(
-            'text',
-            'exerciseTitle',
-            get_lang('ExerciseName'),
-            array('id' => 'exercise_title')
-        );
+        if (api_get_configuration_value('save_titles_as_html')) {
+            $form->addHtmlEditor(
+                'exerciseTitle',
+                get_lang('ExerciseName'),
+                false,
+                false,
+                ['ToolbarSet' => 'Minimal']
+            );
+        } else {
+            $form->addElement(
+                'text',
+                'exerciseTitle',
+                get_lang('ExerciseName'),
+                array('id' => 'exercise_title')
+            );
+        }
 
         $form->addElement('advanced_settings', 'advanced_params', get_lang('AdvancedParameters'));
         $form->addElement('html', '<div id="advanced_params_options" style="display:none">');
@@ -5622,10 +5638,20 @@ class Exercise
         if (!empty($ip)) {
             $array[] = array('title' => get_lang('IP'), 'content' => $ip);
         }
+
+        $icon = Display::return_icon('test-quiz.png', get_lang('Result'),null, ICON_SIZE_MEDIUM);
+
         $html  = '<div class="question-result">';
-        $html .= Display::page_header(
-            Display::return_icon('test-quiz.png', get_lang('Result'),null, ICON_SIZE_MEDIUM).' '.$this->exercise.' : '.get_lang('Result')
-        );
+
+        if (api_get_configuration_value('save_titles_as_html')) {
+            $html .= $this->get_formated_title();
+            $html .= Display::page_header(get_lang('Result'));
+        } else {
+            $html .= Display::page_header(
+                $icon.PHP_EOL.$this->exercise.' : '.get_lang('Result')
+            );
+        }
+
         $html .= Display::description($array);
         $html .="</div>";
         return $html;
@@ -6755,7 +6781,7 @@ class Exercise
                     if ($this->feedback_type != EXERCISE_FEEDBACK_TYPE_DIRECT) {
                         // if the user has already answered this question
                         if (isset($exerciseResult[$questionId])) {
-                            Display::addFlash(Display::return_message(get_lang('AlreadyAnswered'), 'normal'));
+                            echo Display::return_message(get_lang('AlreadyAnswered'), 'normal');
                             break;
                         }
                     }
@@ -7061,7 +7087,7 @@ class Exercise
         // Display text when test is finished #4074 and for LP #4227
         $end_of_message = $this->selectTextWhenFinished();
         if (!empty($end_of_message)) {
-            Display::addFlash(Display::return_message($end_of_message, 'normal', false));
+            echo Display::return_message($end_of_message, 'normal', false);
             echo "<div class='clear'>&nbsp;</div>";
         }
 
@@ -7424,6 +7450,9 @@ class Exercise
     */
     public function get_formated_title()
     {
+        if (api_get_configuration_value('save_titles_as_html')) {
+
+        }
         return api_html_entity_decode($this->selectTitle());
     }
 
@@ -7689,5 +7718,14 @@ class Exercise
         }
 
         return $corrects;
+    }
+
+    /**
+     * Get the title without HTML tags
+     * @return string
+     */
+    private function getUnformattedTitle()
+    {
+        return strip_tags(api_html_entity_decode($this->title));
     }
 }

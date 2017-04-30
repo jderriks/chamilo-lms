@@ -269,10 +269,6 @@ class Database
      */
     public static function fetch_assoc(Statement $result)
     {
-        if ($result === false) {
-            return array();
-        }
-
         return $result->fetch(PDO::FETCH_ASSOC);
     }
 
@@ -377,8 +373,6 @@ class Database
             } catch (Exception $e) {
                 error_log($e->getMessage());
                 api_not_allowed(false, get_lang('GeneralError'));
-
-                exit;
             }
         }
 
