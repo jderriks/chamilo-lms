@@ -229,6 +229,7 @@ function move($source, $target, $forceMove = true, $moveContent = false)
                     }
                 }
             } else {
+                $target = $target. "/" . basename($source);
                 return copyDirTo($source, $target);
             }
             return true;
