@@ -1406,7 +1406,7 @@ class GroupManager
         $groupId = $groupInfo['id'];
 
         $table_group = Database::get_course_table(TABLE_GROUP);
-        if (isset($group_id)) {
+        if (isset($groupID)) {
             $sql = "SELECT status, self_registration_allowed
                     FROM $table_group
                     WHERE c_id = $course_id AND iid = $groupIid";

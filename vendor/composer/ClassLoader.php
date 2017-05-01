@@ -335,8 +335,6 @@ class ClassLoader
     public function findFile($class)
     {
         // class map lookup
-        error_log("findFile ClassLoader.php looking for $class\n"); // JAND
-        
         if (isset($this->classMap[$class])) {
             return $this->classMap[$class];
         }
