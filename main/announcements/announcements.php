@@ -23,7 +23,10 @@ api_protect_course_script(true);
 api_protect_course_group(GroupManager::GROUP_TOOL_ANNOUNCEMENT);
 
 $ctok = Security::get_existing_token();
-$stok = Security::get_token();
+//if form not valid because of missing required fields, dont change token
+if ($ctok != $_POST['sec_token']){    
+    $stok = Security::get_token();
+}
 
 $course_id = api_get_course_int_id();
 $_course = api_get_course_info_by_id($course_id);
@@ -380,7 +383,7 @@ switch ($action) {
             null,
             array('enctype' => 'multipart/form-data')
         );
-
+         
         if (empty($id)) {
             $form_name = get_lang('AddAnnouncement');
         } else {
@@ -396,9 +399,17 @@ switch ($action) {
         $form->addHeader($form_name);
         $form->addButtonAdvancedSettings(
             'choose_recipients',
-            [get_lang('ChooseRecipients'), get_lang('AnnouncementChooseRecipientsDescription')]
+            [get_lang('ChooseRecipients'), ""]
         );
         $form->addHtml('<div id="choose_recipients_options" style="display:none;">');
+        //enable recipient selector by default
+        $form->addHtml("
+                    <script>
+                        $(document).on('ready', function () {
+                            $('#choose_recipients').click();
+                        });
+                    </script>
+                ");
 
         $to = [];
         if (empty($group_id)) {
@@ -458,7 +469,9 @@ switch ($action) {
         } else {
             $element = CourseManager::addGroupMultiSelect($form, $group_properties, []);
         }
-
+        
+        // recipient users field required
+        $form->addRule('users', get_lang('ThisFieldIsRequired'), 'required');
         $form->addHtml('</div>');
         $form->addCheckBox('email_ann', '', get_lang('EmailOption'));
 
@@ -533,7 +546,7 @@ switch ($action) {
         $form->addElement('file', 'user_upload', get_lang('AddAnAttachment'));
         $form->addElement('textarea', 'file_comment', get_lang('FileComment'));
         $form->addElement('hidden', 'sec_token', $stok);
-
+                
         if (empty($sessionId)) {
             $form->addCheckBox('send_to_users_in_session', null, get_lang('SendToUsersInSessions'));
         }
@@ -550,6 +563,10 @@ switch ($action) {
         if ($form->validate()) {
             $data = $form->getSubmitValues();
             $data['users'] = isset($data['users']) ? $data['users'] : ['everyone'];
+            //if user selected "everyone" then remove the rest
+            if (array_search("everyone", $data['users'], true) ) {
+                $data['users'] = ['everyone'];
+            }
             $sendToUsersInSession = isset($data['send_to_users_in_session']) ? true : false;
 
             if (isset($id) && $id) {

@@ -5882,16 +5882,22 @@ class CourseManager
         );
 
         $result = array();
+        // add "everyone" as a special recipient group
+        $userCount = count($userList);
+        $user_label = ($userCount > 0) ? get_lang('Users') : get_lang('LowerCaseUser');
+        $result['everyone'] = ":ALL " . $userCount . " " . $user_label;
+        //values like "GROUP:3" and content like ":G Group 0003 - 6 user"
         foreach ($array as $content) {
             $result[$content['value']] = $content['content'];
         }
-
+        // disable "select all" and keep the options sorted, colon (groups) first.
         return $form->addElement(
             'advmultiselect',
             'users',
             get_lang('Users'),
             $result,
-            array('select_all_checkbox' => true)
+            array('select_all_checkbox' => false),
+            SORT_ASC
         );
     }
 
@@ -5982,7 +5988,7 @@ class CourseManager
                         $result[] = array(
                             'disabled' => $user_disabled,
                             'value' => "GROUP:".$this_group['id'],
-                            'content' => "G: ".$this_group['name']." - ".$this_group['userNb']." ".$user_label
+                            'content' => ":G ".$this_group['name']." - ".$this_group['userNb']." ".$user_label
                         );
                     }
                 }
