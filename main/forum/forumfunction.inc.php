@@ -3722,7 +3722,7 @@ function store_edit_post($forumInfo, $values)
         // Simple edit
         $params = [
             'thread_title' => $values['post_title'],
-            'thread_sticky' => isset($values['thread_sticky']) ? $values['thread_sticky'] : null,
+            'thread_sticky' => isset($values['thread_sticky']) ? $values['thread_sticky'] : 0,
         ];
         $where = ['c_id = ? AND thread_id = ?' => [$course_id, $values['thread_id']]];
         Database::update($threadTable, $params, $where);
