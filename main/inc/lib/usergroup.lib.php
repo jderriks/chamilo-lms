@@ -629,10 +629,11 @@ class UserGroup extends Model
 
     /**
      * Subscribes sessions to a group  (also adding the members of the group in the session and course)
-     * @param   int   $usergroup_id  usergroup id
-     * @param   array  $list list of session ids
+     * @param   int $usergroup_id usergroup id
+     * @param   array $list list of session ids
+     * @param bool $deleteCurrentSessions Optional. Empty the session list for the usergroup (class)
      */
-    public function subscribe_sessions_to_usergroup($usergroup_id, $list)
+    public function subscribe_sessions_to_usergroup($usergroup_id, $list, $deleteCurrentSessions = true)
     {
         $current_list = self::get_sessions_by_usergroup($usergroup_id);
         $user_list = self::get_users_by_usergroup($usergroup_id);
@@ -645,26 +646,28 @@ class UserGroup extends Model
                 }
             }
         }
-        if (!empty($current_list)) {
-            foreach ($current_list as $session_id) {
-                if (!in_array($session_id, $list)) {
-                    $delete_items[] = $session_id;
-                }
-            }
-        }
-
-        // Deleting items
-        if (!empty($delete_items)) {
-            foreach ($delete_items as $session_id) {
-                if (!empty($user_list)) {
-                    foreach ($user_list as $user_id) {
-                        SessionManager::unsubscribe_user_from_session($session_id, $user_id);
+        if ($deleteCurrentSessions) {
+            if (!empty($current_list)) {
+                foreach ($current_list as $session_id) {
+                    if (!in_array($session_id, $list)) {
+                        $delete_items[] = $session_id;
                     }
                 }
-                Database::delete(
-                    $this->usergroup_rel_session_table,
-                    array('usergroup_id = ? AND session_id = ?' => array($usergroup_id, $session_id))
-                );
+            }
+
+            // Deleting items
+            if (!empty($delete_items)) {
+                foreach ($delete_items as $session_id) {
+                    if (!empty($user_list)) {
+                        foreach ($user_list as $user_id) {
+                            SessionManager::unsubscribe_user_from_session($session_id, $user_id);
+                        }
+                    }
+                    Database::delete(
+                        $this->usergroup_rel_session_table,
+                        array('usergroup_id = ? AND session_id = ?' => array($usergroup_id, $session_id))
+                    );
+                }
             }
         }
 
@@ -796,6 +799,7 @@ class UserGroup extends Model
         $current_list = self::get_users_by_usergroup($usergroup_id);
         $course_list = self::get_courses_by_usergroup($usergroup_id);
         $session_list = self::get_sessions_by_usergroup($usergroup_id);
+        $session_list =  array_filter($session_list);
         $relationType = (int) $relationType;
 
         $delete_items = [];
@@ -1096,7 +1100,7 @@ class UserGroup extends Model
     /**
      * @inheritdoc
      */
-    public function update($values)
+    public function update($values, $showQuery = false)
     {
         $values['updated_on'] = api_get_utc_datetime();
         $values['group_type'] = isset($values['group_type']) ? self::SOCIAL_CLASS : self::NORMAL_CLASS;
@@ -1116,7 +1120,7 @@ class UserGroup extends Model
             }
         }
 
-        parent::update($values);
+        parent::update($values, $showQuery);
 
         if (isset($values['delete_picture'])) {
             $this->delete_group_picture($values['id']);

@@ -14,7 +14,8 @@ require_once __DIR__.'/../inc/global.inc.php';
 $this_section = SECTION_PLATFORM_ADMIN;
 
 api_protect_admin_script();
-Skill::isAllow();
+
+Skill::isAllowed();
 
 $action = isset($_GET['action']) ? $_GET['action'] : 'list';
 $skillId = isset($_GET['id']) ? intval($_GET['id']) : 0;
@@ -135,7 +136,7 @@ switch ($action) {
             ['title' => get_lang('SkillsWheel')]
         );
 
-        $toolbar .= Display::url(
+        /*$toolbar .= Display::url(
             Display::return_icon(
                 'edit-skill.png',
                 get_lang('BadgesManagement'),
@@ -144,7 +145,7 @@ switch ($action) {
             ),
             api_get_path(WEB_CODE_PATH).'admin/skill_badge_list.php',
             ['title' => get_lang('BadgesManagement')]
-        );
+        );*/
 
         $toolbar .= Display::url(
             Display::return_icon(
@@ -197,6 +198,5 @@ switch ($action) {
         );
         $tpl->assign('content', $content);
         $tpl->display_one_col_template();
-
         break;
 }

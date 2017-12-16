@@ -10,11 +10,11 @@ $action = isset($_REQUEST['a']) ? $_REQUEST['a'] : null;
 
 api_block_anonymous_users();
 
-Skill::isAllow();
+Skill::isAllowed(api_get_user_id());
 
 $skill = new Skill();
 $gradebook = new Gradebook();
-$skill_gradebook = new SkillRelGradebook();
+$skillGradeBook = new SkillRelGradebook();
 $userId = api_get_user_id();
 
 switch ($action) {
@@ -138,6 +138,7 @@ switch ($action) {
         echo $html;
         break;
     case 'get_skills_tree_json':
+        header('Content-Type: application/json');
         $userId = isset($_REQUEST['load_user']) && $_REQUEST['load_user'] == 1 ? api_get_user_id() : 0;
         $skill_id = isset($_REQUEST['skill_id']) ? intval($_REQUEST['skill_id']) : 0;
         $depth = isset($_REQUEST['main_depth']) ? intval($_REQUEST['main_depth']) : 2;
@@ -284,12 +285,12 @@ switch ($action) {
     case 'remove_skill':
         if (api_is_platform_admin() || api_is_drh()) {
             if (!empty($_REQUEST['skill_id']) && !empty($_REQUEST['gradebook_id'])) {
-                $skill_item = $skill_gradebook->getSkillInfo(
+                $skill_item = $skillGradeBook->getSkillInfo(
                     $_REQUEST['skill_id'],
                     $_REQUEST['gradebook_id']
                 );
                 if (!empty($skill_item)) {
-                    $skill_gradebook->delete($skill_item['id']);
+                    $skillGradeBook->delete($skill_item['id']);
                     echo 1;
                 } else {
                     echo 0;
@@ -309,8 +310,7 @@ switch ($action) {
         if (api_is_platform_admin() || api_is_drh()) {
             $skill_profile = new SkillProfile();
             $params = $_REQUEST;
-            //$params['skills'] = isset($_SESSION['skills']) ? $_SESSION['skills'] : null;
-            $params['skills'] = $params['skill_id'];
+            $params['skills'] = isset($params['skill_id']) ? $params['skill_id'] : null;
             $profileId = isset($_REQUEST['profile']) ? intval($_REQUEST['profile']) : null;
             if ($profileId > 0) {
                 $skill_profile->updateProfileInfo(

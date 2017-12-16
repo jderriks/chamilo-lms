@@ -76,11 +76,12 @@ class ExtraFieldValue extends Model
      * In order to save this function needs a item_id (user id, course id, etc)
      * This function is used with $extraField->addElements()
      * @param array $params array for the insertion into the *_field_values table
+     * @param bool $onlySubmittedFields Only save parameters in the $param array
      * @param bool $showQuery
      * @return mixed false on empty params, void otherwise
      * @assert (array()) === false
      */
-    public function saveFieldValues($params, $showQuery = false)
+    public function saveFieldValues($params, $onlySubmittedFields = false, $showQuery = false)
     {
         foreach ($params as $key => $value) {
             $found = strpos($key, '__persist__');
@@ -117,6 +118,10 @@ class ExtraFieldValue extends Model
                         continue; //not a CLI script, so don't write the value to DB
                     }
                 }
+            }
+
+            if ($onlySubmittedFields && !isset($params['extra_'.$field_variable])) {
+                continue;
             }
 
             if (isset($params['extra_'.$field_variable])) {
@@ -240,7 +245,7 @@ class ExtraFieldValue extends Model
                         mkdir($fileDir, $dirPermissions, true);
                     }
 
-                    if ($value['error'] == 0) {
+                    if (isset($value['error']) && $value['error'] == 0) {
                         //Crop the image to adjust 16:9 ratio
                         $crop = new Image($value['tmp_name']);
                         $crop->crop($params['extra_'.$field_variable.'_crop_result']);
@@ -283,7 +288,7 @@ class ExtraFieldValue extends Model
                         mkdir($fileDir, $dirPermissions, true);
                     }
 
-                    if ($value['error'] == 0) {
+                    if (isset($value['error']) && $value['error'] == 0) {
                         moveUploadedFile($value, $fileDir.$fileName);
 
                         $new_params = array(
@@ -332,11 +337,11 @@ class ExtraFieldValue extends Model
     /**
      * Save values in the *_field_values table
      * @param array $params Structured array with the values to save
-     * @param boolean $show_query Whether to show the insert query (passed to the parent save() method)
+     * @param boolean $showQuery Whether to show the insert query (passed to the parent save() method)
      * @return mixed The result sent from the parent method
      * @assert (array()) === false
      */
-    public function save($params, $show_query = false)
+    public function save($params, $showQuery = false)
     {
         $extra_field = $this->getExtraField();
 
@@ -421,7 +426,7 @@ class ExtraFieldValue extends Model
             }
 
             $params['value'] = $value_to_insert;
-            $params['author_id'] = api_get_user_id();
+            //$params['author_id'] = api_get_user_id();
 
             // Insert
             if (empty($field_values)) {
@@ -478,10 +483,10 @@ class ExtraFieldValue extends Model
 
                         $params['value'] = $optionId;
                         if ($optionId) {
-                            return parent::save($params, $show_query);
+                            return parent::save($params, $showQuery);
                         }
                     } else {
-                        return parent::save($params, $show_query);
+                        return parent::save($params, $showQuery);
                     }
                 }
             } else {
@@ -537,7 +542,7 @@ class ExtraFieldValue extends Model
                 } else {
                     $params['id'] = $field_values['id'];
 
-                    return parent::update($params, $show_query);
+                    return parent::update($params, $showQuery);
                 }
             }
         }
@@ -788,7 +793,6 @@ class ExtraFieldValue extends Model
             // (erroneously) be more than one row for an item
             $sql .= ' DESC';
         }
-
         $result = Database::query($sql);
         if ($result !== false && Database::num_rows($result)) {
             if ($all) {

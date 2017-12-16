@@ -1,18 +1,28 @@
 <?php
 /* For licensing terms, see /license.txt */
 
-//@todo this could be integrated in the inc/lib/model.lib.php + try to clean this file
+use ChamiloSession as Session;
+
 require_once __DIR__.'/../global.inc.php';
 
-$libpath = api_get_path(LIBRARY_PATH);
-
 // 1. Setting variables needed by jqgrid
-
 $action = $_GET['a'];
-$page = intval($_REQUEST['page']); //page
-$limit = intval($_REQUEST['rows']); //quantity of rows
+$page = (int) $_REQUEST['page']; //page
+$limit = (int) $_REQUEST['rows']; //quantity of rows
+
+// Makes max row persistence after refreshing the grid
+$savedRows = Session::read('max_rows_'.$action);
+if (empty($savedRows)) {
+    Session::write('max_rows_'.$action, $limit);
+} else {
+    if ($limit != $savedRows) {
+        Session::write('max_rows_'.$action, $limit);
+    }
+}
+
 $sidx = $_REQUEST['sidx']; //index (field) to filter
 $sord = $_REQUEST['sord']; //asc or desc
+$exportFilename = isset($_REQUEST['export_filename']) ? $_REQUEST['export_filename'] : '';
 
 if (strpos(strtolower($sidx), 'asc') !== false) {
     $sidx = str_replace(array('asc', ','), '', $sidx);
@@ -33,6 +43,7 @@ if (!in_array(
     $action,
     array(
         'get_exercise_results',
+        'get_exercise_results_report',
         'get_work_student_list_overview',
         'get_hotpotatoes_exercise_results',
         'get_work_teacher',
@@ -47,7 +58,8 @@ if (!in_array(
         'get_user_course_report',
         'get_sessions_tracking',
         'get_sessions',
-        'get_course_announcements'
+        'get_course_announcements',
+        'course_log_events'
     )
 ) && !isset($_REQUEST['from_course_session'])) {
     api_protect_admin_script(true);
@@ -112,7 +124,8 @@ $searchOperator = isset($_REQUEST['searchOper']) ? $_REQUEST['searchOper'] : fal
 $searchString = isset($_REQUEST['searchString']) ? $_REQUEST['searchString'] : false;
 $search = isset($_REQUEST['_search']) ? $_REQUEST['_search'] : false;
 $forceSearch = isset($_REQUEST['_force_search']) ? $_REQUEST['_force_search'] : false;
-$extra_fields = array();
+$extra_fields = [];
+$overwriteColumnHeaderExport = [];
 
 if (!empty($searchString)) {
     $search = 'true';
@@ -214,6 +227,18 @@ if (!$sidx) {
 //@todo rework this
 
 switch ($action) {
+    case 'course_log_events':
+        $courseId = api_get_course_int_id();
+        if (empty($courseId)) {
+            exit;
+        }
+        $sessionId = api_get_session_id();
+
+        if (!api_is_allowed_to_edit()) {
+            exit;
+        }
+        $count = Statistics::getNumberOfActivities($courseId, $sessionId);
+        break;
     case 'get_programmed_announcements':
         $object = new ScheduledAnnouncement();
         $count = $object->get_count();
@@ -231,12 +256,19 @@ switch ($action) {
         break;
     case 'get_user_course_report':
     case 'get_user_course_report_resumed':
+        $userNotAllowed = !api_is_student_boss() && !api_is_platform_admin(false, true);
+
+        if ($userNotAllowed) {
+            exit;
+        }
+
         $userId = api_get_user_id();
         $sessionId = isset($_GET['session_id']) ? intval($_GET['session_id']) : 0;
         $courseCodeList = array();
         $userIdList = array();
         $sessionIdList = [];
         $searchByGroups = false;
+
         if (api_is_drh()) {
             if (api_drh_can_access_all_session_content()) {
                 $userList = SessionManager::getAllUsersFromCoursesFromAllSessionFromStatus(
@@ -264,6 +296,7 @@ switch ($action) {
                 if (!empty($userList)) {
                     $userIdList = array_keys($userList);
                 }
+
                 $courseList = CourseManager::get_courses_followed_by_drh(api_get_user_id());
                 if (!empty($courseList)) {
                     $courseCodeList = array_keys($courseList);
@@ -280,10 +313,10 @@ switch ($action) {
                 false,
                 false,
                 false,
-                0,
                 null,
-                0,
-                'ASC',
+                null,
+                null,
+                null,
                 1,
                 null,
                 api_is_student_boss() ? STUDENT_BOSS : COURSEMANAGER,
@@ -298,7 +331,7 @@ switch ($action) {
                 false,
                 null,
                 null,
-                1,
+                null,
                 'asc',
                 null,
                 null,
@@ -323,14 +356,14 @@ switch ($action) {
 
             $searchByGroups = true;
         } elseif (api_is_platform_admin()) {
-            //get students with course or session
+            // Get students with course or session
             $userIdList = SessionManager::getAllUsersFromCoursesFromAllSessionFromStatus(
                 'admin',
                 null,
                 false,
                 null,
                 null,
-                1,
+                null,
                 'asc',
                 null,
                 null,
@@ -520,6 +553,38 @@ switch ($action) {
             $whereCondition
         );
         break;
+    case 'get_exercise_results_report':
+        api_protect_admin_script();
+
+        $exerciseId = isset($_REQUEST['exercise_id']) ? $_REQUEST['exercise_id'] : 0;
+        $courseId = isset($_REQUEST['course_id']) ? $_REQUEST['course_id'] : 0;
+
+        if (empty($exerciseId)) {
+            exit;
+        }
+
+        if (!empty($courseId)) {
+            $courseInfo = api_get_course_info_by_id($courseId);
+        } else {
+            $courseCode = isset($_REQUEST['cidReq']) ? $_REQUEST['cidReq'] : '';
+            if (!empty($courseCode)) {
+                $courseInfo = api_get_course_info($courseCode);
+            }
+        }
+
+        if (empty($courseInfo)) {
+            exit;
+        }
+
+        $startDate = Database::escape_string($_REQUEST['start_date']);
+        $whereCondition .= " AND exe_date > '$startDate' ";
+        $count = ExerciseLib::get_count_exam_results(
+            $exerciseId,
+            $whereCondition,
+            $courseInfo['code'],
+            true
+        );
+        break;
     case 'get_hotpotatoes_exercise_results':
         $hotpot_path = $_REQUEST['path'];
         $count = ExerciseLib::get_count_exam_hotpotatoes_results($hotpot_path);
@@ -642,12 +707,10 @@ switch ($action) {
         $count = $obj->get_count_by_field_id($field_id);
         break;
     case 'get_timelines':
-        require_once $libpath.'timeline.lib.php';
         $obj = new Timeline();
         $count = $obj->get_count();
         break;
     case 'get_gradebooks':
-        require_once $libpath.'gradebook.lib.php';
         $obj = new Gradebook();
         $count = $obj->get_count();
         break;
@@ -717,6 +780,19 @@ $is_allowedToEdit = api_is_allowed_to_edit(null, true) || api_is_allowed_to_edit
 $columns = array();
 
 switch ($action) {
+    case 'course_log_events':
+        $columns = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+        $result = Statistics::getActivitiesData(
+            $start,
+            $limit,
+            $sidx,
+            $sord,
+            $courseId,
+            $sessionId
+        );
+
+        break;
     case 'get_programmed_announcements':
         $columns = array('subject', 'date', 'sent', 'actions');
         $sessionId = isset($_REQUEST['session_id']) ? (int) $_REQUEST['session_id'] : 0;
@@ -1145,6 +1221,75 @@ switch ($action) {
             $sord,
             $exercise_id,
             $whereCondition
+        );
+        break;
+    case 'get_exercise_results_report':
+        // Used inside ExerciseLib::get_exam_results_data()
+        $documentPath = api_get_path(SYS_COURSE_PATH).$courseInfo['path']."/document";
+        $sessionId = api_get_session_id();
+
+        $columns = array(
+            'firstname',
+            'lastname',
+            'username',
+            'session',
+            'session_access_start_date',
+            'exe_date',
+            'score'
+        );
+
+        if ($operation == 'excel') {
+            $columns = array(
+                'firstname',
+                'lastname',
+                'username',
+                'session',
+                'session_access_start_date',
+                'exe_date',
+                'score_percentange',
+                'only_score',
+                'total'
+            );
+            $overwriteColumnHeaderExport['session_access_start_date'] = get_lang('SessionStartDate');
+            $overwriteColumnHeaderExport['exe_date'] = get_lang('StartDate');
+            $overwriteColumnHeaderExport['score_percentange'] = get_lang('Score');
+            $overwriteColumnHeaderExport['only_score'] = get_lang('Score');
+            $overwriteColumnHeaderExport['total'] = get_lang('Score');
+        }
+
+        $categoryList = TestCategory::getListOfCategoriesIDForTest($exerciseId, $courseId);
+        if (!empty($categoryList)) {
+            foreach ($categoryList as $categoryInfo) {
+                $label = 'category_'.$categoryInfo['id'];
+                //$columns[] = $label;
+                $columns[] = $label.'_score_percentange';
+                $columns[] = $label.'_only_score';
+                $columns[] = $label.'_total';
+
+                if ($operation == 'excel') {
+                    $overwriteColumnHeaderExport[$label] = $categoryInfo['title'];
+                    $overwriteColumnHeaderExport[$label.'_score_percentange'] = $categoryInfo['title'];
+                    $overwriteColumnHeaderExport[$label.'_only_score'] = $categoryInfo['title'];
+                    $overwriteColumnHeaderExport[$label.'_total'] = $categoryInfo['title'];
+                }
+            }
+        }
+
+        if ($operation !== 'excel') {
+            $columns[] = 'actions';
+        }
+        $result = ExerciseLib::get_exam_results_data(
+            $start,
+            $limit,
+            $sidx,
+            $sord,
+            $exerciseId,
+            $whereCondition,
+            false,
+            $courseInfo['code'],
+            true,
+            true,
+            !empty($sessionId)
         );
         break;
     case 'get_hotpotatoes_exercise_results':
@@ -1966,6 +2111,7 @@ $allowed_actions = array(
     'get_session_progress',
     'get_exercise_progress',
     'get_exercise_results',
+    'get_exercise_results_report',
     'get_work_student_list_overview',
     'get_hotpotatoes_exercise_results',
     'get_work_teacher',
@@ -1985,7 +2131,8 @@ $allowed_actions = array(
     'get_exercise_grade',
     'get_group_reporting',
     'get_course_announcements',
-    'get_programmed_announcements'
+    'get_programmed_announcements',
+    'course_log_events'
 );
 
 //5. Creating an obj to return a json
@@ -2003,32 +2150,41 @@ if (in_array($action, $allowed_actions)) {
             $column_names = $columns;
         }
 
-        //Headers
+        // Headers
         foreach ($column_names as $col) {
+            // Ovewrite titles
+            if (isset($overwriteColumnHeaderExport[$col])) {
+                $col = $overwriteColumnHeaderExport[$col];
+            }
             $array[0][] = $col;
         }
+
         foreach ($result as $row) {
             foreach ($columns as $col) {
                 $array[$j][] = strip_tags($row[$col]);
             }
             $j++;
         }
+
+        $fileName = !empty($action) ? $action : 'company_report';
+        if (!empty($exportFilename)) {
+            $fileName = $exportFilename;
+        }
+
         switch ($exportFormat) {
             case 'xls':
                 //TODO add date if exists
-                $file_name = (!empty($action)) ? $action : 'company_report';
                 $browser = new Browser();
                 if ($browser->getPlatform() == Browser::PLATFORM_WINDOWS) {
-                    Export::export_table_xls_html($array, $file_name, 'ISO-8859-15');
+                    Export::export_table_xls_html($array, $fileName, 'ISO-8859-15');
                 } else {
-                    Export::export_table_xls_html($array, $file_name);
+                    Export::export_table_xls_html($array, $fileName);
                 }
                 break;
             case 'csv':
             default:
                 //TODO add date if exists
-                $file_name = (!empty($action)) ? $action : 'company_report';
-                Export::arrayToCsv($array, $file_name);
+                Export::arrayToCsv($array, $fileName);
                 break;
         }
         exit;

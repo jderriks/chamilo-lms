@@ -12,7 +12,7 @@ require_once __DIR__.'/../inc/global.inc.php';
 $this_section = SECTION_PLATFORM_ADMIN;
 
 api_protect_admin_script();
-Skill::isAllow();
+Skill::isAllowed();
 
 $interbreadcrumb[] = array(
     'url' => 'index.php',
@@ -89,7 +89,6 @@ if (!empty($users)) {
     }
 }
 
-//$tpl->assign('user_list', $user_list);
 $tpl->assign('order_user_list', $ordered_user_list);
 $tpl->assign('total_search_skills', $count_skills);
 

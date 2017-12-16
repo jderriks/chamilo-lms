@@ -64,6 +64,8 @@ if (api_get_configuration_value('deny_delete_users')) {
     $deleteUserAvailable = false;
 }
 
+trimVariables();
+
 $url = api_get_path(WEB_AJAX_PATH).'course.ajax.php?a=get_user_courses';
 $urlSession = api_get_path(WEB_AJAX_PATH).'session.ajax.php?a=get_user_sessions';
 $extraField = new ExtraField('user');
@@ -192,6 +194,27 @@ function load_calendar(user_id, month, year) {
 </script>';
 
 $this_section = SECTION_PLATFORM_ADMIN;
+
+/**
+ * Trim variable values to avoid trailing spaces
+ */
+function trimVariables()
+{
+    $filterVariables = [
+        'keyword',
+        'keyword_firstname',
+        'keyword_lastname',
+        'keyword_username',
+        'keyword_email',
+        'keyword_officialcode',
+    ];
+
+    foreach ($filterVariables as $variable) {
+        if (isset($_GET[$variable])) {
+            $_GET[$variable] = trim($_GET[$variable]);
+        }
+    }
+}
 
 /**
  * Prepares the shared SQL query for the user table.
@@ -448,7 +471,10 @@ function get_user_data($from, $number_of_items, $column, $direction)
             $user[0],
             USER_IMAGE_SIZE_SMALL
         );
-        $photo = '<img src="'.$userPicture.'" width="22" height="22" alt="'.api_get_person_name($user[2], $user[3]).'" title="'.api_get_person_name($user[2], $user[3]).'" />';
+        $photo = '<img 
+            src="'.$userPicture.'" width="22" height="22" 
+            alt="'.api_get_person_name($user[2], $user[3]).'" 
+            title="'.api_get_person_name($user[2], $user[3]).'" />';
 
         if ($user[7] == 1 && !empty($user[10])) {
             // check expiration date
@@ -544,7 +570,8 @@ function modify_filter($user_id, $url_params, $row)
 
     if (api_is_platform_admin()) {
         if (!$user_is_anonymous) {
-            $result .= '<a href="user_information.php?user_id='.$user_id.'">'.Display::return_icon('synthese_view.gif', get_lang('Info')).'</a>&nbsp;&nbsp;';
+            $result .= '<a href="user_information.php?user_id='.$user_id.'">'.
+                        Display::return_icon('synthese_view.gif', get_lang('Info')).'</a>&nbsp;&nbsp;';
         } else {
             $result .= Display::return_icon('synthese_view_na.gif', get_lang('Info')).'&nbsp;&nbsp;';
         }
@@ -706,7 +733,8 @@ function modify_filter($user_id, $url_params, $row)
                 !$user_is_anonymous &&
                 api_global_admin_can_edit_admin($user_id)
             ) {
-                // you cannot lock yourself out otherwise you could disable all the accounts including your own => everybody is locked out and nobody can change it anymore.
+                // you cannot lock yourself out otherwise you could disable all the accounts
+                // including your own => everybody is locked out and nobody can change it anymore.
                 $result .= ' <a href="user_list.php?action=delete_user&user_id='.$user_id.'&'.$url_params.'&sec_token='.Security::getTokenFromSession().'"  onclick="javascript:if(!confirm('."'".addslashes(api_htmlentities(get_lang("ConfirmYourChoice")))."'".')) return false;">'.
                 Display::return_icon(
                     'delete.png',
@@ -812,7 +840,7 @@ if (!empty($action)) {
                 $result = UrlManager::add_user_to_url($user_id, $urlId);
                 if ($result) {
                     $user_info = api_get_user_info($user_id);
-                    $message = get_lang('UserAdded').' '.$user_info['complete_name'].' ('.$user_info['username'].')';
+                    $message = get_lang('UserAdded').' '.$user_info['complete_name_with_username'];
                     $message = Display::return_message($message, 'confirmation');
                 }
                 break;
@@ -896,7 +924,8 @@ $form->addText(
 $form->addButtonSearch(get_lang('Search'));
 
 $searchAdvanced = '
-<a id="advanced_params" href="javascript://" class = "btn btn-default advanced_options" onclick="display_advanced_search_form();">
+<a id="advanced_params" href="javascript://" 
+    class="btn btn-default advanced_options" onclick="display_advanced_search_form();">
     <span id="img_plus_and_minus">&nbsp;
     '. Display::returnFontAwesomeIcon('arrow-right').' '.get_lang('AdvancedSearch').'
     </span>

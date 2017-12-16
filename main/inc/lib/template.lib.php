@@ -362,6 +362,15 @@ class Template
     /**
      * Displays an empty template
      */
+    public function displayBlankTemplateNoHeader()
+    {
+        $tpl = $this->get_template('layout/blank_no_header.tpl');
+        $this->display($tpl);
+    }
+
+    /**
+     * Displays an empty template
+     */
     public function display_no_layout_template()
     {
         $tpl = $this->get_template('layout/no_layout.tpl');
@@ -489,7 +498,7 @@ class Template
         $this->assign('course_is_set', true);
         $this->course_id = $course['id'];
         $_c = array(
-            'id' => $course['id'],
+            'id' => $course['real_id'],
             'code' => $course['code'],
             'title' => $course['name'],
             'visibility' => $course['visibility'],
@@ -1403,9 +1412,9 @@ class Template
                     $message = get_lang('AccountInactive');
 
                     if (api_get_setting('allow_registration') === 'confirmation') {
-                        $message = sprintf(
-                            get_lang('YourAccountIsInactiveBecauseYouDoesntConfirmItCheckYourEmailAndFollowTheInstructionsOrClickTheFollowingLinkXToReSendTheEmail'),
-                            Display::url(get_lang('ReSendConfirmationMail'), api_get_path(WEB_PATH) . 'main/auth/resend_confirmation_mail.php'));
+                        $message = get_lang('AccountNotConfirmed')
+                            .PHP_EOL
+                            .Display::url(get_lang('ReSendConfirmationMail'), api_get_path(WEB_PATH) . 'main/auth/resend_confirmation_mail.php');
                     }
                     break;
                 case 'user_password_incorrect':

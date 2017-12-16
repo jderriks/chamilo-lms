@@ -6,6 +6,7 @@ use Chamilo\CoreBundle\Entity\ExtraField as EntityExtraField;
 use Chamilo\UserBundle\Entity\User;
 use Chamilo\CoreBundle\Entity\SkillRelUser;
 use Chamilo\CoreBundle\Entity\SkillRelUserComment;
+use Chamilo\CoreBundle\Entity\Repository\AccessUrlRepository;
 use Symfony\Component\Security\Core\Encoder\EncoderFactory;
 use ChamiloSession as Session;
 
@@ -254,6 +255,17 @@ class UserManager
         $access_url_id = 1;
         if (api_get_multiple_access_url()) {
             $access_url_id = api_get_current_access_url_id();
+        } else {
+            // In some cases, the first access_url ID might be different from 1
+            // for example when using a DB cluster or hacking the DB manually.
+            // In this case, we want the first row, not necessarily "1".
+            $dbm = Database::getManager();
+            /** @var AccessUrlRepository $accessUrlRepository */
+            $accessUrlRepository = $dbm->getRepository('ChamiloCoreBundle:AccessUrl');
+            $accessUrl = $accessUrlRepository->getFirstId();
+            if (!empty($accessUrl[0]) && !empty($accessUrl[0][1])) {
+                $access_url_id = $accessUrl[0][1];
+            }
         }
 
         if (isset($_configuration[$access_url_id]) &&
@@ -556,10 +568,10 @@ class UserManager
                         MessageManager::send_message_simple(
                             $adminId,
                             $subject,
-                            $emailBody
+                            $emailBody,
+                            $userId
                         );
                     }
-
                 }
                 /* ENDS MANAGE EVENT WITH MAIL */
             }
@@ -4692,15 +4704,17 @@ class UserManager
     /**
      * Remove the requests for assign a user to a HRM
      * @param User $hrmId
+     * @param array $usersId List of user IDs from whom to remove all relations requests with HRM
      */
-    public static function clearHrmRequestsForUser(User $hrmId)
+    public static function clearHrmRequestsForUser(User $hrmId, $usersId)
     {
+        $users = implode(', ', $usersId);
         Database::getManager()
             ->createQuery('
                 DELETE FROM ChamiloCoreBundle:UserRelUser uru
-                WHERE uru.friendUserId = :hrm_id AND uru.relationType = :relation_type
+                WHERE uru.friendUserId = :hrm_id AND uru.relationType = :relation_type AND uru.userId IN (:users_ids)
             ')
-            ->execute(['hrm_id' => $hrmId, 'relation_type' => USER_RELATION_TYPE_HRM_REQUEST]);
+            ->execute(['hrm_id' => $hrmId, 'relation_type' => USER_RELATION_TYPE_HRM_REQUEST, 'users_ids' => $users]);
     }
 
     /**
@@ -4770,11 +4784,19 @@ class UserManager
         if (is_array($subscribedUsersId)) {
             foreach ($subscribedUsersId as $subscribedUserId) {
                 $subscribedUserId = intval($subscribedUserId);
-                $sql = "INSERT IGNORE INTO $userRelUserTable (user_id, friend_user_id, relation_type)
-                        VALUES ($subscribedUserId, $userId, $relationType)";
-
+                $sql = "SELECT id FROM $userRelUserTable
+                        WHERE user_id = $subscribedUserId
+                        AND friend_user_id = $userId
+                        AND relation_type = $relationType";
                 $result = Database::query($sql);
-                $affectedRows = Database::affected_rows($result);
+                $num = Database::num_rows($result);
+                if ($num === 0) {
+                    $date = api_get_utc_datetime();
+                    $sql = "INSERT INTO $userRelUserTable (user_id, friend_user_id, relation_type, last_edit)
+                        VALUES ($subscribedUserId, $userId, $relationType, '$date')";
+                    $result = Database::query($sql);
+                    $affectedRows += Database::affected_rows($result);
+                }
             }
         }
 
@@ -5393,11 +5415,11 @@ class UserManager
     /**
      * Get the boss user ID from a followed user id
      * @param $userId
-     * @return bool
+     * @return array
      */
     public static function getStudentBossList($userId)
     {
-        $userId = intval($userId);
+        $userId = (int) $userId;
         if ($userId > 0) {
             $userRelTable = Database::get_main_table(TABLE_MAIN_USER_REL_USER);
             $result = Database::select(
@@ -5410,14 +5432,13 @@ class UserManager
                             USER_RELATION_TYPE_BOSS,
                         )
                     )
-                ),
-                'all'
+                )
             );
 
             return $result;
         }
 
-        return false;
+        return [];
     }
 
     /**
@@ -5430,7 +5451,7 @@ class UserManager
     {
         $result = false;
         $bossList = self::getStudentBossList($studentId);
-        if ($bossList) {
+        if (!empty($bossList)) {
             $bossList = array_column($bossList, 'boss_id');
             if (in_array($bossId, $bossList)) {
                 $result = true;
@@ -5739,10 +5760,9 @@ SQL;
 
         $url = api_get_path(WEB_CODE_PATH).'auth/user_mail_confirmation.php?token='.$uniqueId;
         $mailSubject = get_lang('RegistrationConfirmation');
-        $mailBody = sprintf(
-            get_lang('ToCompleteYourPlatformRegistrationYouNeedToConfirmYourAccountByClickingTheFollowingLinkX'),
-            $url
-        );
+        $mailBody = get_lang('RegistrationConfirmationEmailMessage')
+            .PHP_EOL
+            .Display::url($url, $url);
 
         api_mail_html(
             $user->getCompleteName(),

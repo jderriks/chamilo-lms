@@ -330,7 +330,9 @@ if (api_is_global_platform_admin()) {
     );
 }
 
-if (api_is_platform_admin()) {
+$allowCareer = api_get_configuration_value('allow_session_admin_read_careers');
+
+if (api_is_platform_admin() || ($allowCareer && api_is_session_admin())) {
     // option only visible in development mode. Enable through code if required
     if (is_dir(api_get_path(SYS_TEST_PATH).'datafiller/')) {
         $items[] = array('url' => 'user_move_stats.php', 'label' => get_lang('MoveUserStats'));
@@ -446,10 +448,10 @@ if (api_is_platform_admin()) {
             'url' => 'skills_gradebook.php',
             'label' => get_lang('SkillsAndGradebooks')
         );
-        $items[] = array(
+        /*$items[] = array(
             'url' => api_get_path(WEB_CODE_PATH).'admin/skill_badge.php',
             'label' => get_lang('Badges')
-        );
+        );*/
         $blocks['skills']['items'] = $items;
         $blocks['skills']['extra'] = null;
         $blocks['skills']['search_form'] = null;

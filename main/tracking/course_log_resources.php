@@ -2,14 +2,12 @@
 /* For licensing terms, see /license.txt */
 
 /**
- *	@package chamilo.tracking
+ * @package chamilo.tracking
  */
 
-$pathopen = isset($_REQUEST['pathopen']) ? $_REQUEST['pathopen'] : null;
-// Including the global initialization file
 require_once __DIR__.'/../inc/global.inc.php';
 $current_course_tool = TOOL_TRACKING;
-$course_info = api_get_course_info();
+
 $from_myspace = false;
 $from = isset($_GET['from']) ? $_GET['from'] : null;
 
@@ -24,8 +22,7 @@ if ($from == 'myspace') {
 $is_allowedToTrack = api_is_platform_admin() || api_is_allowed_to_create_course() || api_is_session_admin() || api_is_drh() || api_is_course_tutor();
 
 if (!$is_allowedToTrack) {
-    api_not_allowed();
-    exit;
+    api_not_allowed(true);
 }
 
 // Starting the output buffering when we are exporting the information.
@@ -83,35 +80,26 @@ if (empty($session_id)) {
 
 // Breadcrumbs.
 if (isset($_GET['origin']) && $_GET['origin'] == 'resume_session') {
-    $interbreadcrumb[] = array('url' => api_get_path(WEB_CODE_PATH).'admin/index.php', 'name' => get_lang('PlatformAdmin'));
-    $interbreadcrumb[] = array('url' => api_get_path(WEB_CODE_PATH).'session/session_list.php', 'name' => get_lang('SessionList'));
-    $interbreadcrumb[] = array('url' => api_get_path(WEB_CODE_PATH).'session/resume_session.php?id_session='.api_get_session_id(), 'name' => get_lang('SessionOverview'));
+    $interbreadcrumb[] = array(
+        'url' => api_get_path(WEB_CODE_PATH).'admin/index.php',
+        'name' => get_lang('PlatformAdmin'),
+    );
+    $interbreadcrumb[] = array(
+        'url' => api_get_path(WEB_CODE_PATH).'session/session_list.php',
+        'name' => get_lang('SessionList'),
+    );
+    $interbreadcrumb[] = array(
+        'url' => api_get_path(WEB_CODE_PATH).'session/resume_session.php?id_session='.api_get_session_id(),
+        'name' => get_lang('SessionOverview'),
+    );
 }
 
 $nameTools = get_lang('Tracking');
 
-// Display the header.
 Display::display_header($nameTools, 'Tracking');
 
-/* MAIN CODE */
-
 echo '<div class="actions">';
-echo Display::url(
-    Display::return_icon('user.png', get_lang('StudentsTracking'), array(), ICON_SIZE_MEDIUM),
-    api_get_path(WEB_CODE_PATH).'tracking/courseLog.php?'.api_get_cidreq()
-);
-
-echo Display::url(
-    Display::return_icon('group.png', get_lang('GroupReporting'), array(), ICON_SIZE_MEDIUM),
-    'course_log_groups.php?'.api_get_cidreq(true, false)
-);
-
-echo Display::url(
-    Display::return_icon('course.png', get_lang('CourseTracking'), array(), ICON_SIZE_MEDIUM),
-    api_get_path(WEB_CODE_PATH).'tracking/course_log_tools.php?'.api_get_cidreq()
-);
-
-echo Display::return_icon('tools_na.png', get_lang('ResourcesTracking'), array(), ICON_SIZE_MEDIUM);
+echo TrackingCourseLog::actionsLeft('resources', api_get_session_id());
 echo '<span style="float:right; padding-top:0px;">';
 echo '<a href="javascript: void(0);" onclick="javascript: window.print();">'.
     Display::return_icon('printer.png', get_lang('Print'), '', ICON_SIZE_MEDIUM).
@@ -131,7 +119,6 @@ echo '<a href="'.api_get_self().'?'.api_get_cidreq().'&export=csv&'.$addional_pa
 '.Display::return_icon('export_csv.png', get_lang('ExportAsCSV'), '', ICON_SIZE_MEDIUM).'</a>';
 echo '<a href="'.api_get_self().'?'.api_get_cidreq().'&export=xls&'.$addional_param.$users_tracking_per_page.'">
 '.Display::return_icon('export_excel.png', get_lang('ExportAsXLS'), '', ICON_SIZE_MEDIUM).'</a>';
-
 echo '</span>';
 echo '</div>';
 
@@ -164,7 +151,6 @@ $table = new SortableTable(
 );
 
 $parameters = array(
-    //'keyword' => Security::remove_XSS($_GET['keyword']),
     'id_session' => $session_id,
     'cidReq' => api_get_course_id()
 );

@@ -5284,7 +5284,6 @@ class Tracking
             if (!empty($exercise_list)) {
                 $score = $weighting = $exe_id = 0;
                 foreach ($exercise_list as $exercices) {
-
                     $exercise_obj = new Exercise($course_info['real_id']);
                     $exercise_obj->read($exercices['id']);
                     $visible_return = $exercise_obj->is_visible();
@@ -6455,66 +6454,11 @@ class Tracking
      */
     public static function displayUserSkills($userId, $courseId = 0, $sessionId = 0)
     {
-        if (Skill::isAllow($userId, false) === false) {
+        if (Skill::isAllowed($userId, false) === false) {
             return '';
         }
-
-        $userId = intval($userId);
-        $courseId = intval($courseId);
-        $sessionId = intval($sessionId);
-
-        $filter = ['user' => $userId];
-        $filter['course'] = $courseId ?: null;
-        $filter['session'] = $sessionId ?: null;
-
-        $em = Database::getManager();
-        $skillsRelUser = $em->getRepository('ChamiloCoreBundle:SkillRelUser')->findBy($filter);
-
-        $html = '
-            <div class="table-responsive">
-                <table class="table" id="skillList">
-                    <thead>
-                        <tr>
-                            <th>' . get_lang('AchievedSkills').'</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>
-        ';
-
-        if (count($skillsRelUser)) {
-            $html .= '<div class="scrollbar-inner badges-sidebar">
-                        <ul class="list-unstyled list-badges">
-            ';
-
-            foreach ($skillsRelUser as $userSkill) {
-                $skill = $userSkill->getSkill();
-
-                $html .= '<li class="thumbnail">
-                            <a href="' . api_get_path(WEB_PATH).'badge/'.$userSkill->getId().'/user/'.$userId.'" target="_blank">
-                                <img class="img-responsive" title="' . $skill->getName().'" src="'.$skill->getWebIconPath().'" width="64" height="64">
-                                <div class="caption">
-                                    <p class="text-center">' . $skill->getName().'</p>
-                                </div>
-                            </a>
-                        </li>
-                ';
-            }
-
-            $html .= '</ul></div>
-            ';
-        } else {
-            $html .= get_lang('WithoutAchievedSkills');
-        }
-
-        $html .= '</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        ';
-
+        $skillManager = new Skill();
+        $html = $skillManager->getUserSkillsTable($userId, $courseId, $sessionId)['table'];
         return $html;
     }
 
@@ -7622,4 +7566,115 @@ class TrackingCourseLog
         return $users;
     }
 
+    /**
+     * @param string $current
+     */
+    public static function actionsLeft($current, $sessionId = 0)
+    {
+        $usersLink = Display::url(
+            Display::return_icon('user.png', get_lang('StudentsTracking'), array(), ICON_SIZE_MEDIUM),
+            'courseLog.php?'.api_get_cidreq(true, false)
+        );
+
+        $groupsLink = Display::url(
+            Display::return_icon('group.png', get_lang('GroupReporting'), array(), ICON_SIZE_MEDIUM),
+            'course_log_groups.php?'.api_get_cidreq()
+        );
+
+        $resourcesLink = Display::url(
+            Display::return_icon('tools.png', get_lang('ResourcesTracking'), array(), ICON_SIZE_MEDIUM),
+            'course_log_resources.php?'.api_get_cidreq(true, false)
+        );
+
+        $courseLink = Display::url(
+            Display::return_icon('course.png', get_lang('CourseTracking'), array(), ICON_SIZE_MEDIUM),
+            'course_log_tools.php?'.api_get_cidreq(true, false)
+        );
+
+        $examLink = Display::url(
+            Display::return_icon('quiz.png', get_lang('ExamTracking'), array(), ICON_SIZE_MEDIUM),
+            api_get_path(WEB_CODE_PATH).'tracking/exams.php?'.api_get_cidreq()
+        );
+
+        $eventsLink = Display::url(
+            Display::return_icon('security.png', get_lang('EventsReport'), array(), ICON_SIZE_MEDIUM),
+            api_get_path(WEB_CODE_PATH).'tracking/course_log_events.php?'.api_get_cidreq()
+        );
+
+        $attendanceLink = '';
+        if (!empty($sessionId)) {
+            $attendanceLink = Display::url(
+                Display::return_icon('attendance_list.png', get_lang('Logins'), '', ICON_SIZE_MEDIUM),
+                api_get_path(WEB_CODE_PATH).'attendance/index.php?'.api_get_cidreq().'&action=calendar_logins'
+            );
+        }
+
+        switch ($current) {
+            case 'users':
+                $usersLink = Display::url(
+                        Display::return_icon(
+                        'user_na.png',
+                        get_lang('StudentsTracking'),
+                        array(),
+                        ICON_SIZE_MEDIUM
+                    ),
+                    '#'
+                );
+                break;
+            case 'groups':
+                $groupsLink = Display::url(
+                    Display::return_icon('group_na.png', get_lang('GroupReporting'), array(), ICON_SIZE_MEDIUM),
+                    '#'
+                );
+                break;
+            case 'courses':
+                $courseLink = Display::url(
+                    Display::return_icon('course_na.png', get_lang('CourseTracking'), array(), ICON_SIZE_MEDIUM),
+                    '#'
+                );
+                break;
+            case 'resources':
+                $resourcesLink = Display::url(
+                    Display::return_icon(
+                    'tools_na.png',
+                    get_lang('ResourcesTracking'),
+                    array(),
+                    ICON_SIZE_MEDIUM
+                    ), '#'
+                );
+                break;
+            case 'exams':
+                $examLink = Display::url(
+                    Display::return_icon('quiz_na.png', get_lang('ExamTracking'), array(), ICON_SIZE_MEDIUM),
+                    '#'
+                );
+                break;
+            case 'logs':
+                $eventsLink = Display::url(
+                    Display::return_icon('security_na.png', get_lang('EventsReport'), array(), ICON_SIZE_MEDIUM),
+                    '#'
+                );
+                break;
+            case 'attendance':
+                if (!empty($sessionId)) {
+                    $attendanceLink = Display::url(
+                        Display::return_icon('attendance_list.png', get_lang('Logins'), '', ICON_SIZE_MEDIUM),
+                        '#'
+                    );
+                }
+                break;
+        }
+
+        $items = [
+            $usersLink,
+            $groupsLink,
+            $courseLink,
+            $resourcesLink,
+            $examLink,
+            $eventsLink,
+            $attendanceLink
+        ];
+
+        return implode('', $items).'&nbsp;';
+    }
 }

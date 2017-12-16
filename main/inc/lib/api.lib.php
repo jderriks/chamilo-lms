@@ -220,7 +220,11 @@ define('LOG_CAREER_DELETE', 'career_deleted');
 define('LOG_USER_PERSONAL_DOC_DELETED', 'user_doc_deleted');
 define('LOG_WIKI_ACCESS', 'wiki_page_view');
 
+// All results from an exercise
 define('LOG_EXERCISE_RESULT_DELETE', 'exe_result_deleted');
+
+// Logs only the one attempt
+define('LOG_EXERCISE_ATTEMPT_DELETE', 'exe_attempt_deleted');
 define('LOG_LP_ATTEMPT_DELETE', 'lp_attempt_deleted');
 define('LOG_QUESTION_RESULT_DELETE', 'qst_attempt_deleted');
 
@@ -253,6 +257,7 @@ define('LOG_EXERCISE_ID', 'exercise_id');
 define('LOG_EXERCISE_AND_USER_ID', 'exercise_and_user_id');
 define('LOG_LP_ID', 'lp_id');
 define('LOG_EXERCISE_ATTEMPT_QUESTION_ID', 'exercise_a_q_id');
+define('LOG_EXERCISE_ATTEMPT', 'exe_id');
 
 define('LOG_WORK_DIR_DELETE', 'work_dir_delete');
 define('LOG_WORK_FILE_DELETE', 'work_file_delete');
@@ -1469,7 +1474,7 @@ function _api_format_user($user, $add_password = false, $loadAvatars = true)
     // Send message link
     $sendMessage = api_get_path(WEB_AJAX_PATH).'user_manager.ajax.php?a=get_user_popup&user_id='.$user_id;
     $result['complete_name_with_message_link'] = Display::url(
-        $result['complete_name'],
+        $result['complete_name_with_username'],
         $sendMessage,
         ['class' => 'ajax']
     );
@@ -4224,7 +4229,7 @@ function api_get_track_item_property_history($tool, $ref)
  * @param int $session_id
  * @param int $groupId
  *
- * @return array Array with all fields from c_item_property, empty array if not found or false if course could not be found
+ * @return array with all fields from c_item_property, empty array if not found or false if course could not be found
  */
 function api_get_item_property_info($course_id, $tool, $ref, $session_id = 0, $groupId = 0)
 {
@@ -4397,9 +4402,6 @@ function api_display_language_form($hide_if_no_choice = false, $showAsButton = f
         $html .= '</div>';
     }
 
-    //$html .= '<noscript><input type="submit" name="user_select_language" value="'.get_lang('Ok').'" /></noscript>';
-    //$html .= '</form>';
-
     return $html;
 }
 
@@ -4546,30 +4548,31 @@ function api_get_language_from_type($lang_type)
     switch ($lang_type) {
         case 'platform_lang':
             $temp_lang = api_get_setting('platformLanguage');
-            if (!empty($temp_lang))
+            if (!empty($temp_lang)) {
                 $return = $temp_lang;
+            }
             break;
         case 'user_profil_lang':
             $_user = api_get_user_info();
-
-            if (isset($_user['language']) && !empty($_user['language']))
+            if (isset($_user['language']) && !empty($_user['language'])) {
                 $return = $_user['language'];
+            }
             break;
         case 'user_selected_lang':
-            if (isset($_SESSION['user_language_choice']) && !empty($_SESSION['user_language_choice']))
+            if (isset($_SESSION['user_language_choice']) && !empty($_SESSION['user_language_choice'])) {
                 $return = $_SESSION['user_language_choice'];
+            }
             break;
         case 'course_lang':
             global $_course;
             $cidReq = null;
             if (empty($_course)) {
-
                 // Code modified because the local.inc.php file it's declarated after this work
                 // causing the function api_get_course_info() returns a null value
                 $cidReq = isset($_GET["cidReq"]) ? Database::escape_string($_GET["cidReq"]) : null;
                 $cDir = (!empty($_GET['cDir']) ? $_GET['cDir'] : null);
                 if (empty($cidReq) && !empty($cDir)) {
-                    $c = CourseManager::get_course_id_from_path($cDir);
+                    $c = CourseManager::getCourseCodeFromDirectory($cDir);
                     if ($c) {
                         $cidReq = $c;
                     }
@@ -4589,7 +4592,7 @@ function api_get_language_from_type($lang_type)
             break;
         default:
             $return = false;
-        break;
+            break;
     }
 
     return $return;
@@ -5346,7 +5349,9 @@ function api_set_setting($var, $value, $subvar = null, $cat = null, $access_url 
     $var = Database::escape_string($var);
     $value = Database::escape_string($value);
     $access_url = (int) $access_url;
-    if (empty($access_url)) { $access_url = 1; }
+    if (empty($access_url)) {
+        $access_url = 1;
+    }
     $select = "SELECT id FROM $t_settings WHERE variable = '$var' ";
     if (!empty($subvar)) {
         $subvar = Database::escape_string($subvar);
@@ -5361,6 +5366,7 @@ function api_set_setting($var, $value, $subvar = null, $cat = null, $access_url 
     } else {
         $select .= " AND access_url = 1 ";
     }
+
     $res = Database::query($select);
     if (Database::num_rows($res) > 0) {
         // Found item for this access_url.
@@ -8449,6 +8455,46 @@ function api_upload_file($type, $file, $itemId, $cropParameters = '')
         }
         return false;
     }
+}
+
+/**
+ * @param string $type
+ * @param int $itemId
+ * @param string $file
+ *
+ * @return bool
+ */
+function api_get_uploaded_file($type, $itemId, $file)
+{
+    $itemId = (int) $itemId;
+    $pathId = '/'.substr((string) $itemId, 0, 1).'/'.$itemId.'/';
+    $path = api_get_path(SYS_UPLOAD_PATH).$type.$pathId;
+
+    $file = basename($file);
+
+    $file = $path.'/'.$file;
+    if (file_exists($file)) {
+        return $file;
+    }
+    return false;
+}
+
+/**
+ * @param string $type
+ * @param int $itemId
+ * @param string $file
+ * @param string $title
+ */
+function api_download_uploaded_file($type, $itemId, $file, $title = '')
+{
+    $file = api_get_uploaded_file($type, $itemId, $file);
+    if ($file) {
+        if (Security::check_abs_path($file, api_get_path(SYS_UPLOAD_PATH).$type)) {
+            DocumentManager::file_send_for_download($file, true, $title);
+            exit;
+        }
+    }
+    api_not_allowed(true);
 }
 
 /**

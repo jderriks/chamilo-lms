@@ -583,7 +583,7 @@ $_configuration['score_grade_model'] = [
 // 3 = Session link will make course list foldable
 //$_configuration['courses_list_session_title_link'] = 1;
 // New grid view the list of courses
-//$_configuration['view_grid_courses'] = 'true';
+//$_configuration['view_grid_courses'] = true;
 // Show courses grouped by categories when $_configuration['view_grid_courses'] is enabled
 //$_configuration['view_grid_courses_grouped_categories_in_sessions'] = true;
 // Load course notifications in user_portal.php using ajax
@@ -689,3 +689,29 @@ $_configuration['gradebook_badge_sidebar'] = [
         3 => 'Dimension',
     ]
 ];*/
+
+// Hide skill levels options
+//$_configuration['hide_skill_levels'] = false;
+
+// Hide the session list in Reporting tool. Useful when a course has too many sessions.
+//$_configuration['hide_reporting_session_list'] = false;
+
+// Allow session admin to read careers
+//$_configuration['allow_session_admin_read_careers'] = true;
+
+// Send score in percentage in the exam result notification
+//$_configuration['send_notification_score_in_percentage'] = false;
+
+// Google translate key (for the text2speech feature in the documents tool)
+// To get it, go to https://console.cloud.google.com/apis/library, create or
+// use your own project, then search for "speech" and follow the instructions
+// This service has a cost above 60 minutes of use.
+//$_configuration['translate_app_google_key'] = '';
+
+
+// ------ Custom DB changes
+// Add user activation by confirmation email
+// This option prevents the new user to login in the platform if your account is not confirmed via email
+// You need add a new option called "confirmation" to the registration settings
+//INSERT INTO settings_options (variable, value, display_text) VALUES ('allow_registration', 'confirmation', 'MailConfirmation')
+// ------ (End) Custom DB changes

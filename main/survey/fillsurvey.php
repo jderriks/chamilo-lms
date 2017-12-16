@@ -7,7 +7,7 @@ use ChamiloSession as Session;
  * @package chamilo.survey
  * @author unknown, the initial survey that did not make it in 1.8 because of bad code
  * @author Patrick Cool <patrick.cool@UGent.be>, Ghent University: cleanup, refactoring and rewriting large parts of the code
- * @author Julio Montoya Armas <gugli100@gmail.com>, Chamilo: Personality Test modification and rewriting large parts of the code as well
+ * @author Julio Montoya <gugli100@gmail.com>, Chamilo: Personality Test modification and rewriting large parts of the code as well
  * @todo check if the user already filled the survey and if this is the case then the answers have to be updated and not stored again.
  * @todo performance could be improved if not the survey_id was stored with the invitation but the survey_code
  */
@@ -1211,8 +1211,6 @@ if (isset($questions) && is_array($questions)) {
         $form->addHtml('<div class="survey_question '.$ch_type.'">');
         //$form->addHtml('<div class="survey_question_wrapper"><div class="survey_question">');
         $form->addHtml('<h5 class="title">'.$question['sort'].'. '.strip_tags($question['survey_question']).'</h5>');
-        //$form->addHtml($question['survey_question']);
-
         $userAnswerData = SurveyUtil::get_answers_of_question_by_user($question['survey_id'], $question['question_id']);
         $finalAnswer = null;
 
@@ -1367,27 +1365,17 @@ Display::display_footer();
 
 /**
  * Check whether this survey has ended. If so, display message and exit rhis script
+ * @param array $surveyData Survey data
  */
-function check_time_availability($surv_data)
+function check_time_availability($surveyData)
 {
-    $start_date = mktime(
-        0,
-        0,
-        0,
-        substr($surv_data['start_date'], 5, 2),
-        substr($surv_data['start_date'], 8, 2),
-        substr($surv_data['start_date'], 0, 4)
-    );
-    $end_date = mktime(
-        0,
-        0,
-        0,
-        substr($surv_data['end_date'], 5, 2),
-        substr($surv_data['end_date'], 8, 2),
-        substr($surv_data['end_date'], 0, 4)
-    );
-    $cur_date = time();
-    if ($cur_date < $start_date) {
+    $utcZone = new DateTimeZone('UTC');
+    $startDate = new DateTime($surveyData['start_date'], $utcZone);
+    $endDate = new DateTime($surveyData['end_date'], $utcZone);
+    $currentDate = new DateTime('now', $utcZone);
+    $currentDate->modify('today');
+
+    if ($currentDate < $startDate) {
         api_not_allowed(
             true,
             Display:: return_message(
@@ -1398,7 +1386,7 @@ function check_time_availability($surv_data)
         );
     }
 
-    if ($cur_date > $end_date) {
+    if ($currentDate > $endDate) {
         api_not_allowed(
             true,
             Display:: return_message(

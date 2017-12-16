@@ -2025,10 +2025,10 @@ class CourseManager
                 if ($orderList === true) {
                     $html .= '<ul class="user-teacher">';
                     foreach ($list as $teacher) {
-                        $html .= Display::tag(
-                            'li',
-                            Display::return_icon('teacher.png', $teacher, null, ICON_SIZE_TINY).' '.$teacher
-                        );
+                        $html .= '<li>';
+                        $html .= Display::return_icon('teacher.png', '', null, ICON_SIZE_TINY);
+                        $html .= ' '.$teacher;
+                        $html .= '</li>';
                     }
                     $html .= '</ul>';
                 } else {
@@ -2723,7 +2723,8 @@ class CourseManager
         $adminGetsAllCourses = false,
         $loadSpecialCourses = true,
         $skipCourseList = [],
-        $useUserLanguageFilterIfAvailable = true
+        $useUserLanguageFilterIfAvailable = true,
+        $showCoursesSessionWithDifferentKey = false
     ) {
         $user_id = intval($user_id);
         $urlId = api_get_current_access_url_id();
@@ -2746,7 +2747,7 @@ class CourseManager
 
         if ($adminGetsAllCourses && UserManager::is_admin($user_id)) {
             // get the whole courses list
-            $sql = "SELECT DISTINCT(course.code), course.id as real_id
+            $sql = "SELECT DISTINCT(course.code), course.id as real_id, course.title
                     FROM $tbl_course course 
                     INNER JOIN $tableCourseUrl url 
                     ON (course.id = url.c_id)
@@ -2769,7 +2770,8 @@ class CourseManager
                 if (!empty($withSpecialCourses)) {
                     $sql = "SELECT DISTINCT (course.code), 
                             course.id as real_id,
-                            course.category_code AS category
+                            course.category_code AS category,
+                            course.title
                             FROM $tbl_course_user course_rel_user
                             LEFT JOIN $tbl_course course
                             ON course.id = course_rel_user.c_id
@@ -2799,7 +2801,8 @@ class CourseManager
             $sql = "SELECT 
                         DISTINCT(course.code), 
                         course.id as real_id, 
-                        course.category_code AS category
+                        course.category_code AS category,
+                        course.title
                     FROM $tbl_course course
                     INNER JOIN $tbl_course_user cru 
                     ON (course.id = cru.c_id)
@@ -2830,10 +2833,15 @@ class CourseManager
         if ($include_sessions === true) {
             $sql = "SELECT DISTINCT (c.code), 
                         c.id as real_id, 
-                        c.category_code AS category
-                    FROM ".Database::get_main_table(TABLE_MAIN_SESSION_COURSE_USER)." s,
-                    $tbl_course c
-                    WHERE user_id = $user_id AND s.c_id = c.id";
+                        c.category_code AS category,
+                        s.id as session_id,
+                        s.name as session_name
+                    FROM ".Database::get_main_table(TABLE_MAIN_SESSION_COURSE_USER)." scu                     
+                    INNER JOIN $tbl_course c
+                    ON (scu.c_id = c.id)
+                    INNER JOIN ".Database::get_main_table(TABLE_MAIN_SESSION)." s
+                    ON (s.id = scu.session_id)
+                    WHERE user_id = $user_id ";
             $r = Database::query($sql);
             while ($row = Database::fetch_array($r, 'ASSOC')) {
                 if (!empty($skipCourseList)) {
@@ -2841,8 +2849,13 @@ class CourseManager
                         continue;
                     }
                 }
-                if (!in_array($row['real_id'], $codes)) {
+
+                if ($showCoursesSessionWithDifferentKey) {
                     $course_list[] = $row;
+                } else {
+                    if (!in_array($row['real_id'], $codes)) {
+                        $course_list[] = $row;
+                    }
                 }
             }
         }
@@ -2856,7 +2869,7 @@ class CourseManager
      *
      * @return  string  Course code, or false if not found
      */
-    public static function get_course_id_from_path($path)
+    public static function getCourseCodeFromDirectory($path)
     {
         $path = Database::escape_string(str_replace('.', '', str_replace('/', '', $path)));
         $res = Database::query("SELECT code FROM ".Database::get_main_table(TABLE_MAIN_COURSE)."
@@ -3128,7 +3141,7 @@ class CourseManager
                 $data .= $description->title;
                 $data .= '</div>';
                 $data .= '<div class="sectioncomment">';
-                $data .= $description->content;
+                $data .= Security::remove_XSS($description->content);
                 $data .= '</div>';
             }
         } else {
@@ -4368,7 +4381,7 @@ class CourseManager
                 'session_category_id' => $session_category_id
             );
 
-            if (Skill::isAllow($user_id, false)) {
+            if (Skill::isAllowed($user_id, false)) {
                 $em = Database::getManager();
                 $objUser = $em->find('ChamiloUserBundle:User', $user_id);
                 $objCourse = $em->find('ChamiloCoreBundle:Course', $course['real_id']);
@@ -5988,7 +6001,8 @@ class CourseManager
                         $result[] = array(
                             'disabled' => $user_disabled,
                             'value' => "GROUP:".$this_group['id'],
-                            'content' => ":G ".$this_group['name']." - ".$this_group['userNb']." ".$user_label
+                            // The space before "G" is needed in order to advmultiselect.php js puts groups first
+                            'content' => " G: ".$this_group['name']." - ".$this_group['userNb']." ".$user_label
                         );
                     }
                 }

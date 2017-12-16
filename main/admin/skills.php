@@ -11,7 +11,7 @@ require_once __DIR__.'/../inc/global.inc.php';
 $this_section = SECTION_PLATFORM_ADMIN;
 
 api_protect_admin_script();
-Skill::isAllow();
+Skill::isAllowed();
 
 //Adds the JS needed to use the jqgrid
 $htmlHeadXtra[] = api_get_js('jquery.jsPlumb.all.js');
@@ -27,7 +27,6 @@ $html = $skill_visualizer->return_html();
 $url = api_get_path(WEB_AJAX_PATH).'skill.ajax.php?1=1';
 
 $tpl = new Template(null, false, false);
-
 $tpl->assign('url', $url);
 $tpl->assign('html', $html);
 $tpl->assign('skill_visualizer', $skill_visualizer);

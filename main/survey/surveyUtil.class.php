@@ -66,8 +66,8 @@ class SurveyUtil
     {
         $course_id = intval($course_id);
         // table definition
-        $table_survey_answer = Database::get_course_table(TABLE_SURVEY_ANSWER);
-        $sql = "DELETE FROM $table_survey_answer
+        $table = Database::get_course_table(TABLE_SURVEY_ANSWER);
+        $sql = "DELETE FROM $table
 				WHERE
 				    c_id = $course_id AND
                     user = '".Database::escape_string($user)."' AND
@@ -317,8 +317,7 @@ class SurveyUtil
 
         // Actions bar
         echo '<div class="actions">';
-        echo '<a href="'.api_get_path(WEB_CODE_PATH).'survey/reporting.php?survey_id='.$surveyId.'&'.api_get_cidreq()
-            .'">'.
+        echo '<a href="'.api_get_path(WEB_CODE_PATH).'survey/reporting.php?survey_id='.$surveyId.'&'.api_get_cidreq().'">'.
             Display::return_icon('back.png', get_lang('BackTo').' '.get_lang('ReportingOverview'), '', ICON_SIZE_MEDIUM)
             .'</a>';
         if (isset($_GET['user'])) {
@@ -851,7 +850,7 @@ class SurveyUtil
 
         // Actions bar
         echo '<div class="actions">';
-        echo '<a href="'.api_get_path(WEB_CODE_PATH).'survey/reporting.php?survey_id='.$surveyId.'">'
+        echo '<a href="'.api_get_path(WEB_CODE_PATH).'survey/reporting.php?survey_id='.$surveyId.'&'.api_get_cidreq().'">'
             .Display::return_icon(
                 'back.png',
                 get_lang('BackTo').' '.get_lang('ReportingOverview'),
@@ -2564,12 +2563,14 @@ class SurveyUtil
     public static function get_invitations($survey_code)
     {
         $course_id = api_get_course_int_id();
+        $sessionId = api_get_session_id();
         // Database table definition
         $table_survey_invitation = Database::get_course_table(TABLE_SURVEY_INVITATION);
 
         $sql = "SELECT * FROM $table_survey_invitation
 		        WHERE
 		            c_id = $course_id AND
+                    session_id = $sessionId AND
 		            survey_code = '".Database::escape_string($survey_code)."'";
         $result = Database::query($sql);
         $return = array();
@@ -2820,6 +2821,10 @@ class SurveyUtil
                 );
             }
             $return .= Display::url(
+                Display::return_icon('backup.png', get_lang('CopySurvey'), '', ICON_SIZE_SMALL),
+                'copy_survey.php?survey_id='.$survey_id.'&'.api_get_cidreq()
+            );
+            $return .= Display::url(
                 Display::return_icon('copy.png', get_lang('DuplicateSurvey'), '', ICON_SIZE_SMALL),
                 'survey_list.php?action=copy_survey&survey_id='.$survey_id.'&'.api_get_cidreq()
             );
@@ -2830,12 +2835,10 @@ class SurveyUtil
                 .Display::return_icon('clean.png', get_lang('EmptySurvey'), '', ICON_SIZE_SMALL)
                 .'</a>&nbsp;';
         }
-        $return .= '<a href="'.api_get_path(WEB_CODE_PATH).'survey/preview.php?'.api_get_cidreq().'&survey_id='
-            .$survey_id.'">'
+        $return .= '<a href="'.api_get_path(WEB_CODE_PATH).'survey/preview.php?'.api_get_cidreq().'&survey_id='.$survey_id.'">'
             .Display::return_icon('preview_view.png', get_lang('Preview'), '', ICON_SIZE_SMALL)
             .'</a>&nbsp;';
-        $return .= '<a href="'.api_get_path(WEB_CODE_PATH).'survey/survey_invite.php?'.api_get_cidreq().'&survey_id='
-            .$survey_id.'">'
+        $return .= '<a href="'.api_get_path(WEB_CODE_PATH).'survey/survey_invite.php?'.api_get_cidreq().'&survey_id='.$survey_id.'">'
             .Display::return_icon('mail_send.png', get_lang('Publish'), '', ICON_SIZE_SMALL)
             .'</a>&nbsp;';
         $return .= $hideReportingButton ? '' : $reportingLink;
@@ -2860,12 +2863,7 @@ class SurveyUtil
     public static function modify_filter_for_coach($survey_id)
     {
         $survey_id = (int) $survey_id;
-        //$return = '<a href="create_new_survey.php?'.api_get_cidreq().'&action=edit&survey_id='.$survey_id.'">'.Display::return_icon('edit.gif', get_lang('Edit')).'</a>';
-        //$return .= '<a href="survey_list.php?'.api_get_cidreq().'&action=delete&survey_id='.$survey_id.'" onclick="javascript:if(!confirm(\''.addslashes(api_htmlentities(get_lang("DeleteSurvey").'?', ENT_QUOTES)).'\')) return false;">'.Display::return_icon('delete.gif', get_lang('Delete')).'</a>';
-        //$return .= '<a href="create_survey_in_another_language.php?id_survey='.$survey_id.'">'.Display::return_icon('copy.gif', get_lang('Copy')).'</a>';
-        //$return .= '<a href="survey.php?survey_id='.$survey_id.'">'.Display::return_icon('add.gif', get_lang('Add')).'</a>';
-        $return = '<a href="'.api_get_path(WEB_CODE_PATH).'survey/preview.php?'.api_get_cidreq()
-            .'&survey_id='.$survey_id.'">'
+        $return = '<a href="'.api_get_path(WEB_CODE_PATH).'survey/preview.php?'.api_get_cidreq().'&survey_id='.$survey_id.'">'
             .Display::return_icon('preview_view.png', get_lang('Preview'), '', ICON_SIZE_SMALL).'</a>&nbsp;';
         $return .= '<a href="'.api_get_path(WEB_CODE_PATH).'survey/survey_invite.php?'.api_get_cidreq().'&survey_id='.$survey_id.'">'.
             Display::return_icon('mail_send.png', get_lang('Publish'), '', ICON_SIZE_SMALL)
@@ -3006,12 +3004,11 @@ class SurveyUtil
                 survey.survey_id AS col0,
                 survey.title AS col1,
                 survey.code AS col2,
-                count(survey_question.question_id) AS col3,
-        "
-            .(api_is_western_name_order()
+                count(survey_question.question_id) AS col3, "
+                .(api_is_western_name_order()
                 ? "CONCAT(user.firstname, ' ', user.lastname)"
                 : "CONCAT(user.lastname, ' ', user.firstname)")
-            ."	AS col4,
+                ."	AS col4,
                 survey.avail_from AS col5,
                 survey.avail_till AS col6,
                 survey.invited AS col7,
@@ -3216,7 +3213,8 @@ class SurveyUtil
         echo '</thead>';
         echo '<tbody>';
 
-        $now = api_get_utc_datetime();
+        /** @var \DateTime $now */
+        $now = api_get_utc_datetime(null, false, true);
 
         $sql = "SELECT *
                 FROM $table_survey survey 
@@ -3225,11 +3223,12 @@ class SurveyUtil
                 ON (
                     survey.code = survey_invitation.survey_code AND
                     survey.c_id = survey_invitation.c_id
+                    AND survey.session_id = survey_invitation.session_id
                 )
 				WHERE
                     survey_invitation.user = $user_id AND                    
-                    survey.avail_from <= '".$now."' AND
-                    survey.avail_till >= '".$now."' AND
+                    survey.avail_from <= '".$now->format('Y-m-d')."' AND
+                    survey.avail_till >= '".$now->format('Y-m-d')."' AND
                     survey.c_id = $course_id AND
                     survey.session_id = $sessionId AND
                     survey_invitation.c_id = $course_id

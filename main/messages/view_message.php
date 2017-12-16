@@ -1,8 +1,10 @@
 <?php
 /* For licensing terms, see /license.txt */
+
 /**
  * @package chamilo.messages
  */
+
 $cidReset = true;
 require_once __DIR__.'/../inc/global.inc.php';
 api_block_anonymous_users();
@@ -35,11 +37,11 @@ if (api_get_setting('allow_message_tool') === 'true') {
 $social_right_content .= '</div>';
 
 if (empty($_GET['id'])) {
-    $id_message = $_GET['id_send'];
+    $messageId = $_GET['id_send'];
     $source = 'outbox';
     $show_menu = 'messages_outbox';
 } else {
-    $id_message = $_GET['id'];
+    $messageId = $_GET['id'];
     $source = 'inbox';
     $show_menu = 'messages_inbox';
 }
@@ -52,12 +54,12 @@ if (api_get_setting('allow_social_tool') === 'true') {
     $social_menu_block = SocialManager::show_social_menu($show_menu);
 }
 // MAIN CONTENT
-$message .= MessageManager::show_message_box($id_message, $source);
+$message .= MessageManager::showMessageBox($messageId, $source);
 
 if (!empty($message)) {
     $social_right_content .= $message;
 } else {
-    api_not_allowed();
+    api_not_allowed(true);
 }
 $tpl = new Template(get_lang('View'));
 // Block Social Avatar

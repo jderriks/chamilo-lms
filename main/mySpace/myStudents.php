@@ -407,7 +407,7 @@ if (api_can_login_as($student_id)) {
         Display::return_icon('login_as.png', get_lang('LoginAs'), null, ICON_SIZE_MEDIUM).'</a>&nbsp;&nbsp;';
 }
 
-if (Skill::isAllow($student_id, false)) {
+if (Skill::isAllowed($student_id, false)) {
     echo Display::url(
         Display::return_icon(
             'skill-badges.png',
@@ -557,7 +557,7 @@ $userGroups = $userGroupManager->getNameListByUser(
         <tbody>
         <tr>
             <td><?php echo get_lang('Name'); ?></td>
-            <td><?php echo $user_info['complete_name']; ?></td>
+            <td><?php echo $user_info['complete_name_with_message_link']; ?></td>
         </tr>
         <tr>
             <td><?php echo get_lang('Email'); ?></td>
@@ -599,7 +599,8 @@ $userGroups = $userGroupManager->getNameListByUser(
                         'origin' => $origin,
                         'cidReq' => $course_code,
                         'id_session' => $sessionId
-                    ])
+                    ]),
+                    ['class' => 'btn btn-default']
                 );
                 ?>
                 </td>
@@ -697,7 +698,7 @@ $userGroups = $userGroupManager->getNameListByUser(
                     'legal_accept'
                 );
                 $icon = Display::return_icon('accept_na.png');
-                if (isset($value['value'])) {
+                if (isset($value['value']) && !empty($value['value'])) {
                     list($legalId, $legalLanguageId, $legalTime) = explode(':', $value['value']);
                     $icon = Display::return_icon('accept.png').' '.api_get_local_time($legalTime);
                     $icon .= ' '.Display::url(
@@ -1588,7 +1589,6 @@ if (empty($details)) {
     </div>
 <?php
 } //end details
-
 echo Tracking::displayUserSkills(
     $user_info['user_id'],
     $courseInfo ? $courseInfo['real_id'] : 0,

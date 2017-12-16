@@ -67,7 +67,7 @@ class TestCategory
 
         // check if name already exists
         $sql = "SELECT count(*) AS nb FROM $table
-                WHERE title = '".$this->name."' AND c_id=$courseId";
+                WHERE title = '".$this->name."' AND c_id = $courseId";
         $result = Database::query($sql);
         $row = Database::fetch_array($result);
         // lets add in BDD if not the same name
@@ -242,6 +242,8 @@ class TestCategory
     public static function getCategoryForQuestion($questionId, $courseId = 0)
     {
         $courseId = (int) $courseId;
+        $questionId = (int) $questionId;
+
         if (empty($courseId)) {
             $courseId = api_get_course_int_id();
         }
@@ -251,7 +253,6 @@ class TestCategory
         }
 
         $table = Database::get_course_table(TABLE_QUIZ_QUESTION_REL_CATEGORY);
-        $questionId = intval($questionId);
         $sql = "SELECT category_id
                 FROM $table
                 WHERE question_id = $questionId AND c_id = $courseId";
@@ -316,13 +317,14 @@ class TestCategory
      * return : array of category id (integer)
      * hubert.borderiou 07-04-2011
      * @param int $exerciseId
+     * @param int $courseId
      *
      * @return array
      */
-    public static function getListOfCategoriesIDForTest($exerciseId)
+    public static function getListOfCategoriesIDForTest($exerciseId, $courseId = 0)
     {
         // parcourir les questions d'un test, recup les categories uniques dans un tableau
-        $exercise = new Exercise();
+        $exercise = new Exercise($courseId);
         $exercise->read($exerciseId, false);
         $categoriesInExercise = $exercise->getQuestionWithCategories();
         // the array given by selectQuestionList start at indice 1 and not at indice 0 !!! ???
@@ -337,14 +339,14 @@ class TestCategory
     }
 
     /**
-     * @param Exercise $exercise_obj
+     * @param Exercise $exercise
      * @return array
      */
-    public static function getListOfCategoriesIDForTestObject(Exercise $exercise_obj)
+    public static function getListOfCategoriesIDForTestObject(Exercise $exercise)
     {
         // parcourir les questions d'un test, recup les categories uniques dans un tableau
         $categories_in_exercise = array();
-        $question_list = $exercise_obj->getQuestionOrderedListByName();
+        $question_list = $exercise->getQuestionOrderedListByName();
 
         // the array given by selectQuestionList start at indice 1 and not at indice 0 !!! ???
         foreach ($question_list as $questionInfo) {
@@ -367,18 +369,17 @@ class TestCategory
 
     /**
      * Return the list of different categories NAME for a test
-     * @param int exercise id
+     * @param int $exerciseId
      * @param bool
      * @return array
      *
      * @author function rewrote by jmontoya
      */
-    public static function getListOfCategoriesNameForTest($exercise_id, $grouped_by_category = true)
+    public static function getListOfCategoriesNameForTest($exerciseId, $grouped_by_category = true)
     {
         $result = array();
         $categories = self::getListOfCategoriesIDForTest(
-            $exercise_id,
-            $grouped_by_category
+            $exerciseId
         );
 
         foreach ($categories as $catInfo) {
@@ -397,13 +398,13 @@ class TestCategory
     }
 
     /**
-     * @param Exercise $exercise_obj
+     * @param Exercise $exercise
      * @return array
      */
-    public static function getListOfCategoriesForTest(Exercise $exercise_obj)
+    public static function getListOfCategoriesForTest(Exercise $exercise)
     {
         $result = array();
-        $categories = self::getListOfCategoriesIDForTestObject($exercise_obj);
+        $categories = self::getListOfCategoriesIDForTestObject($exercise);
         foreach ($categories as $cat_id) {
             $cat = new TestCategory();
             $cat = (array) $cat->getCategory($cat_id);
@@ -629,7 +630,6 @@ class TestCategory
     public static function returnCategoryAndTitle($questionId, $in_display_category_name = 1)
     {
         $is_student = !(api_is_allowed_to_edit(null, true) || api_is_session_admin());
-        // @todo fix $_SESSION['objExercise']
         $objExercise = Session::read('objExercise');
         if (!empty($objExercise)) {
             $in_display_category_name = $objExercise->display_category_name;
@@ -732,7 +732,6 @@ class TestCategory
         $res_num_max = 0;
         // foreach question
         $categories = self::getListOfCategoriesIDForTest($exerciseId);
-
         foreach ($categories as $category) {
             if (empty($category['id'])) {
                 continue;
@@ -1011,19 +1010,19 @@ class TestCategory
 
     /**
      * Returns the category form.
-     * @param Exercise $exercise_obj
+     * @param Exercise $exercise
      * @return string
      */
-    public function returnCategoryForm(Exercise $exercise_obj)
+    public function returnCategoryForm(Exercise $exercise)
     {
-        $categories = $this->getListOfCategoriesForTest($exercise_obj);
-        $saved_categories = $exercise_obj->get_categories_in_exercise();
+        $categories = $this->getListOfCategoriesForTest($exercise);
+        $saved_categories = $exercise->get_categories_in_exercise();
         $return = null;
 
         if (!empty($categories)) {
-            $nbQuestionsTotal = $exercise_obj->getNumberQuestionExerciseCategory();
-            $exercise_obj->setCategoriesGrouping(true);
-            $real_question_count = count($exercise_obj->getQuestionList());
+            $nbQuestionsTotal = $exercise->getNumberQuestionExerciseCategory();
+            $exercise->setCategoriesGrouping(true);
+            $real_question_count = count($exercise->getQuestionList());
 
             $warning = null;
             if ($nbQuestionsTotal != $real_question_count) {

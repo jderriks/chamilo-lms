@@ -395,7 +395,7 @@ class IndexManager
             ];
         }
 
-        if (Skill::isAllow(0, false)) {
+        if (Skill::isAllowed(0, false)) {
             $items[] = [
                 'icon' => Display::return_icon('skill-badges.png', get_lang('MySkills')),
                 'link' => api_get_path(WEB_CODE_PATH).'social/my_skills_report.php',
@@ -920,20 +920,16 @@ class IndexManager
             $total_invitations = $number_of_new_messages_of_friend + $group_pending_invitations;
             $cant_msg = Display::badge($number_of_new_messages);
 
-            $link = '';
-            if (api_get_setting('allow_social_tool') == 'true') {
-                $link = '?f=social';
-            }
             $items[] = [
                 'class' => 'inbox-message-social',
                 'icon' => Display::return_icon('inbox.png', get_lang('Inbox')),
-                'link' => api_get_path(WEB_PATH).'main/messages/inbox.php'.$link,
+                'link' => api_get_path(WEB_PATH).'main/messages/inbox.php',
                 'title' => get_lang('Inbox').$cant_msg
             ];
             $items[] = [
                 'class' => 'new-message-social',
                 'icon' => Display::return_icon('new-message.png', get_lang('Compose')),
-                'link' => api_get_path(WEB_PATH).'main/messages/new_message.php'.$link,
+                'link' => api_get_path(WEB_PATH).'main/messages/new_message.php',
                 'title' => get_lang('Compose')
             ];
 
@@ -1013,7 +1009,6 @@ class IndexManager
         // Main navigation section.
         // Tabs that are deactivated are added here.
         if (!empty($this->tpl->menu_navigation)) {
-            //$content = '<ul class="nav nav-pills nav-stacked">';
             foreach ($this->tpl->menu_navigation as $section => $navigation_info) {
                 $items [] = [
                     'icon' => null,
@@ -1165,7 +1160,7 @@ class IndexManager
         $gameModeIsActive = api_get_setting('gamification_mode');
         $listCourse = '';
         $specialCourseList = '';
-        $viewGridCourses = api_get_configuration_value('view_grid_courses') === 'true';
+        $viewGridCourses = api_get_configuration_value('view_grid_courses') === true;
         $showSimpleSessionInfo = api_get_configuration_value('show_simple_session_info');
 
         $coursesWithoutCategoryTemplate = '/user_portal/classic_courses_without_category.tpl';
@@ -1187,7 +1182,6 @@ class IndexManager
         // courses list
         $studentInfo = api_get_configuration_value('course_student_info');
         $viewGrid = api_get_configuration_value('view_grid_courses');
-
 
         $studentInfoProgress = !empty($studentInfo['progress']) && $studentInfo['progress'] === true;
         $studentInfoScore = !empty($studentInfo['score']) && $studentInfo['score'] === true;
@@ -1294,7 +1288,7 @@ class IndexManager
                                     $courses['in_category'][$key1]['student_info']['certificate'] = null;
                                     $isCertificateAvailable = $category[0]->is_certificate_available($user_id);
                                     if (isset($category[0])) {
-                                        if ($viewGrid == 'true') {
+                                        if ($viewGrid) {
                                             if ($isCertificateAvailable) {
                                                 $courses['in_category'][$key1]['student_info']['certificate'] = get_lang('Yes');
                                             } else {
@@ -1352,7 +1346,7 @@ class IndexManager
 
                             if (isset($category[0])) {
                                 $certificateAvailable = $category[0]->is_certificate_available($user_id);
-                                if ($viewGrid == 'true') {
+                                if ($viewGrid) {
                                     if ($certificateAvailable) {
                                         $courses['not_category'][$key]['student_info']['certificate'] = get_lang('Yes');
                                     } else {

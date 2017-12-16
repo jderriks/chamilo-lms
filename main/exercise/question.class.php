@@ -159,7 +159,7 @@ abstract class Question
                 $objQuestion->extra = $object->extra;
                 $objQuestion->course = $course_info;
                 $objQuestion->feedback = isset($object->feedback) ? $object->feedback : '';
-                $objQuestion->category = TestCategory::getCategoryForQuestion($id);
+                $objQuestion->category = TestCategory::getCategoryForQuestion($id, $course_id);
 
                 $tblQuiz = Database::get_course_table(TABLE_QUIZ_TEST);
                 $sql = "SELECT DISTINCT q.exercice_id
@@ -1010,7 +1010,6 @@ abstract class Question
             if ($exercise->questionFeedbackEnabled) {
                 $params['feedback'] = $this->feedback;
             }
-
             $this->id = Database::insert($TBL_QUESTIONS, $params);
 
             if ($this->id) {

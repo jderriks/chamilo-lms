@@ -75,17 +75,22 @@ class Career extends Model
     }
 
     /**
-     * Displays the title + grid
+     * Returns HTML the title + grid
+     * @return string
      */
     public function display()
     {
-        echo '<div class="actions" style="margin-bottom:20px">';
-        echo '<a href="career_dashboard.php">'.
+        $html = '<div class="actions" style="margin-bottom:20px">';
+        $html .= '<a href="career_dashboard.php">'.
             Display::return_icon('back.png', get_lang('Back'), '', ICON_SIZE_MEDIUM).'</a>';
-        echo '<a href="'.api_get_self().'?action=add">'.
-                Display::return_icon('new_career.png', get_lang('Add'), '', ICON_SIZE_MEDIUM).'</a>';
-        echo '</div>';
-        echo Display::grid_html('careers');
+        if (api_is_platform_admin()) {
+            $html .= '<a href="'.api_get_self().'?action=add">'.
+                    Display::return_icon('new_career.png', get_lang('Add'), '', ICON_SIZE_MEDIUM).'</a>';
+        }
+        $html .= '</div>';
+        $html .= Display::grid_html('careers');
+
+        return $html;
     }
 
     /**
@@ -151,6 +156,7 @@ class Career extends Model
         if (!empty($defaults['updated_at'])) {
             $defaults['updated_at'] = api_convert_and_format_date($defaults['updated_at']);
         }
+
         $form->setDefaults($defaults);
 
         // Setting the rules
@@ -268,17 +274,15 @@ class Career extends Model
     }
 
     /**
-     * Update the career table with the given params
-     * @param array $params The field values to be set
-     * @return bool Returns true if the record could be updated, false otherwise
+     * @inheritdoc
      */
-    public function update($params)
+    public function update($params, $showQuery = false)
     {
         if (isset($params['description'])) {
             $params['description'] = Security::remove_XSS($params['description']);
         }
 
-        return parent::update($params);
+        return parent::update($params, $showQuery);
     }
 
     /**
@@ -308,7 +312,6 @@ class Career extends Model
         /** @var Vertex $vertex */
         foreach ($graph->getVertices() as $vertex) {
             $group = $vertex->getAttribute('Group');
-
             $groupData = explode(':', $group);
             $group = $groupData[0];
             $groupLabel = isset($groupData[1]) ? $groupData[1] : '';
@@ -337,7 +340,7 @@ class Career extends Model
         // Read Connections column
         foreach ($list as $group => $subGroupList) {
             foreach ($subGroupList as $subGroupData) {
-                $columns = $subGroupData['columns'];
+                $columns = isset($subGroupData['columns']) ? $subGroupData['columns'] : [];
                 $showGroupLine = true;
                 if (count($columns) == 1) {
                     $showGroupLine = false;
@@ -471,13 +474,18 @@ class Career extends Model
         }
 
         foreach ($subGroupList as $subGroup => $subGroupData) {
-            $subGroupLabel = $subGroupData['label'];
-            $columnList = $subGroupData['columns'];
+            $subGroupLabel = isset($subGroupData['label']) ? $subGroupData['label'] : '';
+            $columnList = isset($subGroupData['columns']) ? $subGroupData['columns'] : [];
+
+            if (empty($columnList)) {
+                continue;
+            }
 
             $line = '';
             if (!empty($subGroup)) {
                 $line = 'border-style:solid;';
             }
+
             // padding:15px;
             $graphHtml .= '<div id="subgroup_'.$subGroup.'" class="career_subgroup" style="'.$line.' margin-bottom:20px; padding:15px; float:left; margin-left:0px; width:100%">';
             if (!empty($subGroupLabel)) {

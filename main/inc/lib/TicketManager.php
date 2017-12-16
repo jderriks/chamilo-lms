@@ -5,6 +5,7 @@ use Chamilo\TicketBundle\Entity\Project;
 use Chamilo\TicketBundle\Entity\Status;
 use Chamilo\TicketBundle\Entity\Priority;
 use Chamilo\TicketBundle\Entity\Ticket;
+use Chamilo\TicketBundle\Entity\MessageAttachment;
 
 /**
  * Class TicketManager
@@ -275,7 +276,7 @@ class TicketManager
      * @param string $subject
      * @param string $content
      * @param string $personalEmail
-     * @param $file_attachments
+     * @param array $fileAttachments
      * @param string $source
      * @param string $priority
      * @param string $status
@@ -292,7 +293,7 @@ class TicketManager
         $subject,
         $content,
         $personalEmail = '',
-        $file_attachments = [],
+        $fileAttachments = [],
         $source = '',
         $priority = '',
         $status = '',
@@ -397,9 +398,9 @@ class TicketManager
                 ));
             }
 
-            if (!empty($file_attachments)) {
+            if (!empty($fileAttachments)) {
                 $attachmentCount = 0;
-                foreach ($file_attachments as $attach) {
+                foreach ($fileAttachments as $attach) {
                     if (!empty($attach['tmp_name'])) {
                         $attachmentCount++;
                     }
@@ -409,7 +410,7 @@ class TicketManager
                         $ticketId,
                         '',
                         '',
-                        $file_attachments,
+                        $fileAttachments,
                         $currentUserId
                     );
                 }
@@ -430,32 +431,32 @@ class TicketManager
             $helpDeskMessage =
                 '<table>
                         <tr>
-                            <td width="100px"><b>' . get_lang('User').'</b></td>
-                            <td width="400px">' . $currentUserInfo['complete_name'].'</td>
+                            <td width="100px"><b>'.get_lang('User').'</b></td>
+                            <td width="400px">'.$currentUserInfo['complete_name'].'</td>
                         </tr>
                         <tr>
-                            <td width="100px"><b>' . get_lang('Username').'</b></td>
-                            <td width="400px">' . $currentUserInfo['username'].'</td>
+                            <td width="100px"><b>'.get_lang('Username').'</b></td>
+                            <td width="400px">'.$currentUserInfo['username'].'</td>
                         </tr>
                         <tr>
-                            <td width="100px"><b>' . get_lang('Email').'</b></td>
-                            <td width="400px">' . $currentUserInfo['email'].'</td>
+                            <td width="100px"><b>'.get_lang('Email').'</b></td>
+                            <td width="400px">'.$currentUserInfo['email'].'</td>
                         </tr>
                         <tr>
-                            <td width="100px"><b>' . get_lang('Phone').'</b></td>
-                            <td width="400px">' . $currentUserInfo['phone'].'</td>
+                            <td width="100px"><b>'.get_lang('Phone').'</b></td>
+                            <td width="400px">'.$currentUserInfo['phone'].'</td>
                         </tr>
                         <tr>
-                            <td width="100px"><b>' . get_lang('Date').'</b></td>
-                            <td width="400px">' . api_convert_and_format_date($now, DATE_TIME_FORMAT_LONG).'</td>
+                            <td width="100px"><b>'.get_lang('Date').'</b></td>
+                            <td width="400px">'.api_convert_and_format_date($now, DATE_TIME_FORMAT_LONG).'</td>
                         </tr>
                         <tr>
-                            <td width="100px"><b>' . get_lang('Title').'</b></td>
-                            <td width="400px">' . $subject.'</td>
+                            <td width="100px"><b>'.get_lang('Title').'</b></td>
+                            <td width="400px">'.$subject.'</td>
                         </tr>
                         <tr>
-                            <td width="100px"><b>' . get_lang('Description').'</b></td>
-                            <td width="400px">' . $content.'</td>
+                            <td width="100px"><b>'.get_lang('Description').'</b></td>
+                            <td width="400px">'.$content.'</td>
                         </tr>
                     </table>';
 
@@ -480,7 +481,7 @@ class TicketManager
                     $admins = UserManager::get_all_administrators();
                     foreach ($admins as $userId => $data) {
                         if ($data['active']) {
-                            self::send_message_simple(
+                            MessageManager::send_message_simple(
                                 $userId,
                                 $warningSubject,
                                 $helpDeskMessage
@@ -613,7 +614,7 @@ class TicketManager
      * @param int $ticketId
      * @param string $subject
      * @param string $content
-     * @param array $file_attachments
+     * @param array $fileAttachments
      * @param int $userId
      * @param string $status
      * @param bool $sendConfirmation
@@ -624,7 +625,7 @@ class TicketManager
         $ticketId,
         $subject,
         $content,
-        $file_attachments,
+        $fileAttachments,
         $userId,
         $status = 'NOL',
         $sendConfirmation = false
@@ -670,10 +671,10 @@ class TicketManager
                     WHERE id = $ticketId ";
             Database::query($sql);
 
-            if (is_array($file_attachments)) {
-                foreach ($file_attachments as $file_attach) {
+            if (is_array($fileAttachments)) {
+                foreach ($fileAttachments as $file_attach) {
                     if ($file_attach['error'] == 0) {
-                        self::save_message_attachment_file(
+                        self::saveMessageAttachmentFile(
                             $file_attach,
                             $ticketId,
                             $messageId
@@ -697,7 +698,7 @@ class TicketManager
      * @param $message_id
      * @return array
      */
-    public static function save_message_attachment_file(
+    public static function saveMessageAttachmentFile(
         $file_attach,
         $ticketId,
         $message_id
@@ -717,45 +718,35 @@ class TicketManager
                 'error'
             );
         } else {
-            $new_file_name = uniqid('');
-            $path_attachment = api_get_path(SYS_ARCHIVE_PATH);
-            $path_message_attach = $path_attachment.'plugin_ticket_messageattch/';
-            if (!file_exists($path_message_attach)) {
-                @mkdir($path_message_attach, api_get_permissions_for_new_directories(), true);
-            }
-            $new_path = $path_message_attach.$new_file_name;
-            if (is_uploaded_file($file_attach['tmp_name'])) {
-                @copy($file_attach['tmp_name'], $new_path);
-            }
-            $safe_file_name = Database::escape_string($file_name);
-            $safe_new_file_name = Database::escape_string($new_file_name);
-            $sql = "INSERT INTO $table_support_message_attachments (
-                    filename,
-                    path,
-                    ticket_id,
-                    message_id,
-                    size,
-                    sys_insert_user_id,
-                    sys_insert_datetime,
-                    sys_lastedit_user_id,
-                    sys_lastedit_datetime
-                ) VALUES (
-                    '$safe_file_name',
-                    '$safe_new_file_name',
-                    '$ticketId',
-                    '$message_id',
-                    '".$file_attach['size']."',
-                    '$userId',
-                    '$now',
-                    '$userId',
-                    '$now'
-                )";
-            Database::query($sql);
+            $result = api_upload_file('ticket_attachment', $file_attach, $ticketId);
+            if ($result) {
+                $safe_file_name = Database::escape_string($new_file_name);
+                $safe_new_file_name = Database::escape_string($result['path_to_save']);
+                $sql = "INSERT INTO $table_support_message_attachments (
+                        filename,
+                        path,
+                        ticket_id,
+                        message_id,
+                        size,
+                        sys_insert_user_id,
+                        sys_insert_datetime,
+                        sys_lastedit_user_id,
+                        sys_lastedit_datetime
+                    ) VALUES (
+                        '$safe_file_name',
+                        '$safe_new_file_name',
+                        '$ticketId',
+                        '$message_id',
+                        '".$file_attach['size']."',
+                        '$userId',
+                        '$now',
+                        '$userId',
+                        '$now'
+                    )";
+                Database::query($sql);
 
-            return array(
-                'path' => $path_message_attach.$safe_new_file_name,
-                'filename' => $safe_file_name,
-            );
+                return true;
+            }
         }
     }
 
@@ -860,6 +851,9 @@ class TicketManager
                       ticket.message LIKE '%$keyword%' OR
                       ticket.keyword LIKE '%$keyword%' OR
                       ticket.source LIKE '%$keyword%' OR
+                      cat.name LIKE '%$keyword%' OR
+                      status.name LIKE '%$keyword%' OR
+                      priority.name LIKE '%$keyword%' OR
                       ticket.personal_email LIKE '%$keyword%'                          
             )";
         }
@@ -873,10 +867,12 @@ class TicketManager
             'keyword_priority' => 'ticket.priority_id'
         ];
 
-        foreach ($keywords as $keyword => $sqlLabel) {
+        foreach ($keywords as $keyword => $label) {
             if (isset($_GET[$keyword])) {
                 $data = Database::escape_string(trim($_GET[$keyword]));
-                $sql .= " AND $sqlLabel = '$data' ";
+                if (!empty($data)) {
+                    $sql .= " AND $label = '$data' ";
+                }
             }
         }
 
@@ -949,7 +945,12 @@ class TicketManager
             $row['start_date'] = Display::dateToStringAgoAndLongDate($row['start_date']);
             $row['sys_lastedit_datetime'] = Display::dateToStringAgoAndLongDate($row['sys_lastedit_datetime']);
 
-            $icon = Display::return_icon($img_source, get_lang('Info')).'<a href="ticket_details.php?ticket_id='.$row['id'].'">'.$row['code'].'</a>';
+            $icon = Display::return_icon(
+                $img_source,
+                get_lang('Info')
+            );
+
+            $icon .= '<a href="ticket_details.php?ticket_id='.$row['id'].'">'.$row['code'].'</a>';
 
             if ($isAdmin) {
                 $ticket = array(
@@ -1074,18 +1075,38 @@ class TicketManager
         }
         if ($keyword_course != '') {
             $course_table = Database::get_main_table(TABLE_MAIN_COURSE);
-            $sql .= " AND ticket.course_id IN ( ";
-            $sql .= "SELECT id
-                     FROM $course_table
-                     WHERE (title LIKE '%$keyword_course%'
-                     OR code LIKE '%$keyword_course%'
-                     OR visual_code LIKE '%$keyword_course%' )) ";
+            $sql .= " AND ticket.course_id IN (  
+                        SELECT id
+                        FROM $course_table
+                        WHERE (
+                            title LIKE '%$keyword_course%' OR 
+                            code LIKE '%$keyword_course%' OR 
+                            visual_code LIKE '%$keyword_course%'
+                        )
+                   ) ";
         }
 
         $res = Database::query($sql);
         $obj = Database::fetch_object($res);
 
         return (int)$obj->total;
+    }
+
+    /**
+     * @param int $id
+     * @return MessageAttachment
+     */
+    public static function getTicketMessageAttachment($id)
+    {
+        $id = (int) $id;
+        $em = Database::getManager();
+
+        $item = $em->getRepository('ChamiloTicketBundle:MessageAttachment')->find($id);
+        if ($item) {
+            return $item;
+        }
+
+        return false;
     }
 
     /**
@@ -1181,8 +1202,8 @@ class TicketManager
 
                 $result_attach = Database::query($sql);
                 while ($row2 = Database::fetch_assoc($result_attach)) {
-                    $archiveURL = $archiveURL = $webPath.'ticket/download.php?ticket_id='.$ticketId.'&file=';
-                    $row2['attachment_link'] = $attach_icon.'&nbsp;<a href="'.$archiveURL.$row2['path'].'&title='.$row2['filename'].'">'.$row2['filename'].'</a>&nbsp;('.$row2['size'].')';
+                    $archiveURL = $webPath.'ticket/download.php?ticket_id='.$ticketId.'&id='.$row2['id'];
+                    $row2['attachment_link'] = $attach_icon.'&nbsp;<a href="'.$archiveURL.'">'.$row2['filename'].'</a>&nbsp;('.$row2['size'].')';
                     $message['attachments'][] = $row2;
                 }
                 $ticket['messages'][] = $message;
@@ -2160,29 +2181,48 @@ class TicketManager
     }
 
     /**
-     * @return string
+     * Returns a list of menu elements for the tickets system's configuration
+     * @param string $exclude The element to exclude from the list
+     * @return array
      */
-    public static function getSettingsMenu()
+    public static function getSettingsMenuItems($exclude = null)
     {
-        $items = [
-            [
-                'url' => 'projects.php',
-                'content' => get_lang('Projects')
-            ],
-            [
-                'url' => 'status.php',
-                'content' => get_lang('Status')
-            ],
-            [
-                'url' => 'priorities.php',
-                'content' => get_lang('Priority')
-            ]
+        $items = [];
+        $project = [
+            'icon' => 'career.png',
+            'url' => 'projects.php',
+            'content' => get_lang('Projects')
         ];
+        $status = [
+            'icon' => 'check-circle.png',
+            'url' => 'status.php',
+            'content' => get_lang('Status')
+        ];
+        $priority = [
+            'icon' => 'order-course.png',
+            'url' => 'priorities.php',
+            'content' => get_lang('Priority')
+        ];
+        switch ($exclude) {
+            case 'project':
+                $items = [$status, $priority];
+                break;
+            case 'status':
+                $items = [$project, $priority];
+                break;
+            case 'priority':
+                $items = [$project, $status];
+                break;
+            default:
+                $items = [$project, $status, $priority];
+                break;
+        }
 
-        echo Display::actions($items);
+        return $items;
     }
 
     /**
+     * Returns a list of strings representing the default statuses
      * @return array
      */
     public static function getDefaultStatusList()

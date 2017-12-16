@@ -113,6 +113,7 @@ class Exercise
         $this->endButton = 0;
         $this->scoreTypeModel = 0;
         $this->globalCategoryId = null;
+        $this->notifications = [];
 
         if (!empty($courseId)) {
             $course_info = api_get_course_info_by_id($courseId);
@@ -619,8 +620,7 @@ class Exercise
                     FROM $TBL_EXERCICE_QUESTION e 
                     INNER JOIN $TBL_QUESTIONS  q
                     ON (e.question_id = q.id AND e.c_id = ".$this->course_id." )
-					WHERE e.exercice_id	= '".Database::escape_string($this->id)."'
-					";
+					WHERE e.exercice_id	= '".$this->id."' ";
 
             $orderCondition = "ORDER BY question_order";
 
@@ -715,7 +715,7 @@ class Exercise
                 ON (e.question_id = q.id AND e.c_id = q.c_id)
                 WHERE 
                     e.c_id = {$this->course_id} AND 
-                    e.exercice_id = ".Database::escape_string($this->id);
+                    e.exercice_id = ".$this->id;
         $result = Database::query($sql);
 
         $count = 0;
@@ -742,7 +742,7 @@ class Exercise
                 ON (e.question_id= q.id AND e.c_id = q.c_id)
                 WHERE 
                     e.c_id = {$this->course_id} AND 
-                    e.exercice_id = '".Database::escape_string($this->id)."'
+                    e.exercice_id = '".$this->id."'
                 ORDER BY q.question";
         $result = Database::query($sql);
         $list = array();
@@ -770,7 +770,7 @@ class Exercise
                 ON (e.question_id = q.id AND e.c_id = q.c_id)
                 WHERE
                   e.c_id = {$this->course_id} AND
-                  e.exercice_id	= ".Database::escape_string($this->id);
+                  e.exercice_id	= ".$this->id;
 
         $result = Database::query($sql);
         $count_question_orders = Database::num_rows($result);
@@ -782,7 +782,7 @@ class Exercise
                 ON (e.question_id = q.id AND e.c_id = q.c_id)
                 WHERE
                     e.c_id = {$this->course_id} AND
-                    e.exercice_id	= '".Database::escape_string($this->id)."'
+                    e.exercice_id = '".$this->id."'
                 ORDER BY question_order";
 
         $result = Database::query($sql);
@@ -1708,8 +1708,11 @@ class Exercise
             $allow = api_get_configuration_value('allow_notification_setting_per_exercise');
             if ($allow === true) {
                 $notifications = $this->getNotifications();
-                $notifications = implode(',', $notifications);
-                $params['notifications'] = $notifications;
+                $params['notifications'] = '';
+                if (!empty($notifications)) {
+                    $notifications = implode(',', $notifications);
+                    $params['notifications'] = $notifications;
+                }
             }
 
             $this->id = Database::insert($TBL_EXERCISES, $params);
@@ -3475,7 +3478,7 @@ class Exercise
         }
 
         // Construction of the Answer object
-        $objAnswerTmp = new Answer($questionId);
+        $objAnswerTmp = new Answer($questionId, $course_id);
         $nbrAnswers = $objAnswerTmp->selectNbrAnswers();
 
         if ($debug) {
@@ -3576,7 +3579,7 @@ class Exercise
                                     exe_id = '".$exeId."' AND
                                     question_id= '".$questionId."'";
                         $result = Database::query($sql);
-                        $choice = Database::result($result, 0, "answer");
+                        $choice = Database::result($result, 0, 'answer');
 
                         $studentChoice = $choice == $answerAutoId ? 1 : 0;
                         if ($studentChoice) {
@@ -3594,7 +3597,7 @@ class Exercise
                 // for multiple answers
                 case MULTIPLE_ANSWER_TRUE_FALSE:
                     if ($from_database) {
-                        $choice = array();
+                        $choice = [];
                         $sql = "SELECT answer FROM $TBL_TRACK_ATTEMPT
                                 WHERE
                                     exe_id = $exeId AND
@@ -3602,8 +3605,7 @@ class Exercise
 
                         $result = Database::query($sql);
                         while ($row = Database::fetch_array($result)) {
-                            $ind = $row['answer'];
-                            $values = explode(':', $ind);
+                            $values = explode(':', $row['answer']);
                             $my_answer_id = isset($values[0]) ? $values[0] : '';
                             $option = isset($values[1]) ? $values[1] : '';
                             $choice[$my_answer_id] = $option;
@@ -3633,13 +3635,12 @@ class Exercise
                     break;
                 case MULTIPLE_ANSWER: //2
                     if ($from_database) {
-                        $choice = array();
+                        $choice = [];
                         $sql = "SELECT answer FROM ".$TBL_TRACK_ATTEMPT."
                                 WHERE exe_id = '".$exeId."' AND question_id= '".$questionId."'";
                         $resultans = Database::query($sql);
                         while ($row = Database::fetch_array($resultans)) {
-                            $ind = $row['answer'];
-                            $choice[$ind] = 1;
+                            $choice[$row['answer']] = 1;
                         }
 
                         $studentChoice = isset($choice[$answerAutoId]) ? $choice[$answerAutoId] : null;
@@ -3664,13 +3665,12 @@ class Exercise
                     break;
                 case GLOBAL_MULTIPLE_ANSWER:
                     if ($from_database) {
-                        $choice = array();
+                        $choice = [];
                         $sql = "SELECT answer FROM $TBL_TRACK_ATTEMPT
                                 WHERE exe_id = '".$exeId."' AND question_id= '".$questionId."'";
                         $resultans = Database::query($sql);
                         while ($row = Database::fetch_array($resultans)) {
-                            $ind = $row['answer'];
-                            $choice[$ind] = 1;
+                            $choice[$row['answer']] = 1;
                         }
                         $studentChoice = isset($choice[$answerAutoId]) ? $choice[$answerAutoId] : null;
                         $real_answers[$answerId] = (bool) $studentChoice;
@@ -3691,12 +3691,12 @@ class Exercise
                     break;
                 case MULTIPLE_ANSWER_COMBINATION_TRUE_FALSE:
                     if ($from_database) {
+                        $choice = [];
                         $sql = "SELECT answer FROM ".$TBL_TRACK_ATTEMPT."
                                 WHERE exe_id = $exeId AND question_id= ".$questionId;
                         $resultans = Database::query($sql);
                         while ($row = Database::fetch_array($resultans)) {
-                            $ind = $row['answer'];
-                            $result = explode(':', $ind);
+                            $result = explode(':', $row['answer']);
                             if (isset($result[0])) {
                                 $my_answer_id = isset($result[0]) ? $result[0] : '';
                                 $option = isset($result[1]) ? $result[1] : '';
@@ -3725,16 +3725,15 @@ class Exercise
                     break;
                 case MULTIPLE_ANSWER_COMBINATION:
                     if ($from_database) {
+                        $choice = [];
                         $sql = "SELECT answer FROM $TBL_TRACK_ATTEMPT
                                 WHERE exe_id = $exeId AND question_id= $questionId";
                         $resultans = Database::query($sql);
                         while ($row = Database::fetch_array($resultans)) {
-                            $ind = $row['answer'];
-                            $choice[$ind] = 1;
+                            $choice[$row['answer']] = 1;
                         }
 
                         $studentChoice = isset($choice[$answerAutoId]) ? $choice[$answerAutoId] : null;
-
                         if ($answerCorrect == 1) {
                             if ($studentChoice) {
                                 $real_answers[$answerId] = true;
@@ -3750,7 +3749,6 @@ class Exercise
                         }
                     } else {
                         $studentChoice = isset($choice[$answerAutoId]) ? $choice[$answerAutoId] : null;
-
                         if ($answerCorrect == 1) {
                             if ($studentChoice) {
                                 $real_answers[$answerId] = true;
@@ -5724,10 +5722,12 @@ class Exercise
             return false;
         }
 
-
         $scoreLabel = '';
-        if ($sendEnd && api_get_configuration_value('send_score_in_exam_notification_mail_to_manager') == true) {
-            $scoreLabel = ExerciseLib::show_score($score, $weight, false, true);
+        if ($sendEnd &&
+            api_get_configuration_value('send_score_in_exam_notification_mail_to_manager') == true
+        ) {
+            $notificationPercentage = api_get_configuration_value('send_notification_score_in_percentage');
+            $scoreLabel = ExerciseLib::show_score($score, $weight, $notificationPercentage, true);
             $scoreLabel = "<tr>
                             <td>".get_lang('Score')."</td>
                             <td>&nbsp;$scoreLabel</td>
